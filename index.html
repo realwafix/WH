@@ -332,7 +332,7 @@
                 const res = await fetch(`${API_BASE}/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: u, password: p })
+                    body: JSON.stringify({ Username: u, Password: p })
                 });
                 if (!res.ok) {
                     document.getElementById('loginError').classList.remove('hidden');
