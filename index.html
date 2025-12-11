@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>3PL KPI MONTHLY | V26 Fixed</title>
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 900: '#020617', 800: '#0f172a', 700: '#1e293b', 600: '#334155' },
+                        brand: { 500: '#6366f1', 400: '#818cf8', 600: '#4f46e5' },
+                        ai: { 500: '#8b5cf6', 400: '#a78bfa' } 
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    animation: { 
+                        'fade-in': 'fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'pulse-slow': 'pulse 3s infinite',
+                        'typing': 'typing 2s steps(40, end)'
+                    },
+                    keyframes: { 
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        typing: { 'from': { width: '0' }, 'to': { width: '100%' } }
+                    }
+                }
+            }
+        }
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = '#1e293b';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; overflow-x: hidden; }
+        .num-font { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Glass Card & Hover Effects */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .glass-card:hover { 
+            transform: translateY(-5px);
+            background: rgba(30, 41, 59, 0.7);
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Hover Overlay for Details */
+        .card-details-overlay {
+            position: absolute; inset: 0;
+            background: rgba(2, 6, 23, 0.95);
+            display: flex; flex-direction: column; justify-content: center; padding: 1.5rem;
+            opacity: 0; transition: opacity 0.3s ease;
+            pointer-events: none; z-index: 20;
+        }
+        .glass-card:hover .card-details-overlay { opacity: 1; pointer-events: auto; }
+
+        .sparkline-container { height: 50px; width: 100%; margin-top: 10px; opacity: 0.8; }
+        .chart-box { position: relative; height: 320px; width: 100%; }
+        
+        /* Typography */
+        .section-title { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: white; }
+        .title-container { border-left: 4px solid; padding-left: 0.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; }
+
+        /* Login Overlay */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #020617; z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Cinema Mode Classes */
+        body.cinema-mode header, body.cinema-mode aside, body.cinema-mode .footer-info { display: none !important; }
+        body.cinema-mode main { margin: 0; padding: 0; height: 100vh; width: 100vw; background: #020617; position: fixed; top: 0; left: 0; z-index: 50; }
+        body.cinema-mode #contentArea { padding: 0; height: 100%; overflow: hidden; display: flex; }
+
+        /* Presentation Slides */
+        .presentation-slide {
+            display: none; width: 100%; height: 100%; padding: 3rem 5rem;
+            flex-direction: column; box-sizing: border-box;
+            background: radial-gradient(circle at top right, rgba(30, 41, 59, 0.4), #020617 70%);
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        .presentation-slide.active { display: flex; }
+
+        /* AI Box in Slide */
+        .ai-slide-summary {
+            background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), rgba(15, 23, 42, 0.4));
+            border-left: 4px solid #a78bfa;
+            padding: 1.5rem; margin-bottom: 2rem; border-radius: 0.5rem;
+            animation: slideUp 0.8s ease-out 0.3s backwards;
+        }
+
+        /* Exit Button */
+        #exitCinemaBtn {
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            background: rgba(239, 68, 68, 0.8); color: white;
+            padding: 8px 16px; border-radius: 30px; font-weight: bold; font-size: 0.8rem;
+            cursor: pointer; display: none; backdrop-filter: blur(5px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        body.cinema-mode #exitCinemaBtn { display: block; }
+
+        /* Progress Bar */
+        #slideProgress { position: fixed; bottom: 0; left: 0; height: 4px; background: #6366f1; width: 0%; z-index: 10001; transition: width 0.1s linear; display: none; }
+        body.cinema-mode #slideProgress { display: block; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+        /* Markdown */
+        .prose-invert strong { color: #fff; font-weight: 700; color: #a78bfa; }
+        
+        #loadingOverlayData { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2,6,23,0.9); z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginOverlay">
+        <div class="bg-dark-800 p-8 rounded-2xl border border-dark-600 shadow-2xl w-96 text-center">
+            <div class="mb-6 flex justify-center">
+                <div class="h-16 w-16 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
+                    <i class="fas fa-shield-alt text-3xl text-white"></i>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2">Secure Gateway</h2>
+            <p class="text-slate-400 text-sm mb-6">Authorized Personnel Only</p>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div class="relative">
+                    <i class="fas fa-user absolute left-3 top-3 text-slate-500"></i>
+                    <input type="text" id="username" placeholder="Username" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 pl-10 focus:ring-2 focus:ring-brand-500 outline-none" required>
+                </div>
+                <div class="relative">
+                    <i class="fas fa-key absolute left-3 top-3 text-slate-500"></i>
+                    <input type="password" id="password" placeholder="Password" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 pl-10 focus:ring-2 focus:ring-brand-500 outline-none" required>
+                </div>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-lg transition-all shadow-lg">Access Dashboard</button>
+            </form>
+            <p id="loginError" class="text-red-500 text-xs mt-4 hidden"><i class="fas fa-times-circle"></i> Invalid credentials</p>
+        </div>
+    </div>
+
+    <!-- Presentation Controls -->
+    <button id="exitCinemaBtn" onclick="stopPresentation()"><i class="fas fa-times mr-2"></i> Exit Presentation</button>
+    <div id="slideProgress"></div>
+
+    <!-- Loading Overlay Data -->
+    <div id="loadingOverlayData" class="fixed inset-0 z-50 bg-dark-900 flex flex-col items-center justify-center hidden">
+        <div class="w-16 h-16 border-4 border-dark-700 border-t-brand-500 rounded-full animate-spin mb-4"></div>
+        <p class="text-slate-400 font-mono text-sm">Fetching Data...</p>
+    </div>
+
+    <!-- AI PROCESSING OVERLAY -->
+    <div id="aiProcessingOverlay" class="fixed inset-0 z-[60] bg-dark-900/95 flex flex-col items-center justify-center hidden">
+        <div class="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
+        <h3 class="text-2xl font-bold text-white animate-pulse">Generating Presentation...</h3>
+        <p class="text-slate-400 mt-2">Asking Gemini to analyze each section separately</p>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="w-20 md:w-72 bg-dark-800 border-r border-dark-700 flex flex-col z-20 hidden md:flex transition-all">
+        <div class="h-20 flex items-center justify-center md:justify-start md:px-8 border-b border-dark-700 bg-dark-900/50">
+            <div class="h-10 w-10 bg-brand-600 rounded-lg flex items-center justify-center shadow-lg"><i class="fas fa-cubes-stacked text-white text-lg"></i></div>
+            <div class="ml-4 hidden md:block"><h1 class="text-lg font-bold text-white">3PL KPI</h1><p class="text-[10px] text-brand-400 font-bold tracking-[0.2em]">MONTHLY</p></div>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-8 space-y-2 px-4">
+            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-4 hidden md:block">Modules</div>
+            <a href="#" onclick="scrollToSection('overview')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-chart-pie w-5 group-hover:text-brand-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Overview</span></a>
+            <a href="#" onclick="scrollToSection('inbound')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-arrow-down w-5 group-hover:text-blue-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Inbound</span></a>
+            <a href="#" onclick="scrollToSection('outbound')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-arrow-up w-5 group-hover:text-indigo-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Outbound</span></a>
+            <a href="#" onclick="scrollToSection('transport')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-truck-fast w-5 group-hover:text-orange-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Fleet</span></a>
+            <a href="#" onclick="scrollToSection('finance')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-file-invoice w-5 group-hover:text-yellow-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Finance</span></a>
+             <a href="#" onclick="scrollToSection('pending')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all border border-transparent hover:border-red-500/30"><i class="fas fa-exclamation-triangle w-5 group-hover:text-red-500"></i><span class="ml-3 text-sm font-medium hidden md:block text-red-400">Pending</span></a>
+        </nav>
+        <div class="p-6 border-t border-dark-700 bg-dark-900/30 hidden md:block footer-info">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs text-white font-bold" id="userAvatar">U</div>
+                <div class="overflow-hidden">
+                    <p class="text-xs text-slate-300 font-bold truncate" id="userNameDisplay">User</p>
+                    <button onclick="location.reload()" class="text-[10px] text-red-400 hover:text-red-300">Logout</button>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col h-full relative bg-dark-900">
+        <!-- Header -->
+        <header class="h-20 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-8 z-30">
+            <div><h2 class="text-xl font-bold text-white tracking-tight">Dashboard Overview</h2><p class="text-xs text-slate-400 mt-1" id="lastUpdateTxt">Last Sync: ...</p></div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleAiSummary()" class="group flex items-center gap-2 bg-dark-800 hover:bg-dark-700 text-white px-3 py-1.5 rounded-lg transition-all border border-dark-600 hover:border-purple-500/50 shadow-lg"><i class="fas fa-sparkles text-purple-400"></i><span class="text-xs font-bold text-purple-300">AI Analysis</span></button>
+                <button onclick="startSmartPresentation()" class="group flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-lg transition-all shadow-lg transform hover:scale-105"><i class="fas fa-play-circle text-xl animate-pulse"></i><span class="text-sm font-bold">Presentation</span></button>
+                <div class="h-8 w-px bg-dark-600 mx-2"></div>
+                <select id="monthSelect" class="bg-dark-900 border border-dark-600 text-white text-sm rounded-lg pl-4 pr-8 py-2 focus:ring-2 focus:ring-brand-500 block shadow-sm cursor-pointer"></select>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div id="contentArea" class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
+            
+            <!-- AI SUMMARY INLINE (Hidden) -->
+            <div id="aiSummarySection" class="hidden mb-8 animate-slide-down">
+                <div class="ai-card rounded-2xl p-8 relative overflow-hidden" style="background: linear-gradient(145deg, rgba(139,92,246,0.1), rgba(15,23,42,0.6)); border: 1px solid rgba(139,92,246,0.2);">
+                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><i class="fas fa-brain text-[150px] text-purple-500"></i></div>
+                    <div class="flex justify-between items-start mb-6 relative z-10">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/50"><i class="fas fa-sparkles text-purple-400"></i></div>
+                            <div><h3 class="text-xl font-bold text-white">AI Executive Summary</h3><p class="text-xs text-purple-300 font-mono">Real-time analysis powered by AI</p></div>
+                        </div>
+                        <button onclick="hideAiSummary()" class="text-slate-400 hover:text-white bg-dark-900/50 hover:bg-dark-900 rounded-lg p-2 transition-colors"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div id="aiLoadingState" class="hidden py-8 flex flex-col items-center justify-center">
+                        <div class="flex items-center gap-2 mb-2"><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-100"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></span></div><p class="text-sm text-purple-300 animate-pulse">Analyzing dashboard metrics...</p>
+                    </div>
+                    <div id="aiSummaryContent" class="prose-invert text-sm max-w-none text-slate-300 relative z-10"></div>
+                </div>
+            </div>
+
+            <!-- === PRESENTATION SLIDES (Hidden in Normal View) === -->
+            <div id="slide-overview" class="presentation-slide hidden">
+                <div class="title-container border-brand-500 mb-4"><h3 class="section-title text-brand-400">Executive Overview</h3></div>
+                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-overview" class="text-slate-200 text-sm"></div></div>
+                <div id="slide-content-overview" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
+            </div>
+            <div id="slide-inbound" class="presentation-slide hidden">
+                <div class="title-container border-blue-500 mb-4"><h3 class="section-title text-blue-400">Inbound Operations</h3></div>
+                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-inbound" class="text-slate-200 text-sm"></div></div>
+                <div id="slide-content-inbound" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
+            </div>
+            <div id="slide-outbound" class="presentation-slide hidden">
+                <div class="title-container border-indigo-500 mb-4"><h3 class="section-title text-indigo-400">Outbound Operations</h3></div>
+                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-outbound" class="text-slate-200 text-sm"></div></div>
+                <div id="slide-content-outbound" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
+            </div>
+            <div id="slide-storage" class="presentation-slide hidden">
+                <div class="title-container border-purple-500 mb-4"><h3 class="section-title text-purple-400">Storage & Capacity</h3></div>
+                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-storage" class="text-slate-200 text-sm"></div></div>
+                <div id="slide-content-storage" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
+            </div>
+            <div id="slide-fleet" class="presentation-slide hidden">
+                <div class="title-container border-orange-500 mb-4"><h3 class="section-title text-orange-400">Fleet & Transport</h3></div>
+                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-fleet" class="text-slate-200 text-sm"></div></div>
+                <div id="slide-content-fleet" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
+            </div>
+            <div id="slide-finance" class="presentation-slide hidden">
+                <div class="title-container border-yellow-500 mb-4"><h3 class="section-title text-yellow-400">Financial Reconciliation</h3></div>
+                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-finance" class="text-slate-200 text-sm"></div></div>
+                <div id="slide-content-finance" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
+            </div>
+
+            <!-- === NORMAL DASHBOARD VIEW === -->
+            <div id="normal-dashboard-view" class="space-y-16 pb-20">
+                
+                <!-- 1. OVERVIEW -->
+                <section id="overview" class="animate-fade-in"><div class="title-container border-brand-500"><h3 class="section-title text-brand-400">Performance Overview</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-orders"></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-returns"></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10"><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Total Orders Trend</h4></div><div class="chart-box"><canvas id="chart-orders-trend"></canvas></div></div><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Market Share</h4></div><div class="chart-box"><canvas id="chart-orders-dist"></canvas></div></div></div></section>
+                
+                <!-- 2. QUALITY -->
+                <section id="quality" class="animate-fade-in"><div class="title-container border-emerald-500"><h3 class="section-title text-emerald-400">Quality Standards</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="quality-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Comparative Quality Metrics</h4><div class="chart-box"><canvas id="chart-quality-comp"></canvas></div></div></section>
+                
+                <!-- 3. STORAGE -->
+                <section id="storage" class="animate-fade-in"><div class="title-container border-purple-500"><h3 class="section-title text-purple-400">Warehouse Capacity</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="storage-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-storage-trend"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-storage-bar"></canvas></div></div></section>
+                
+                <!-- 4. INBOUND -->
+                <section id="inbound" class="animate-fade-in"><div class="title-container border-blue-500"><h3 class="section-title text-blue-400">Inbound Operations</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-trucks"></canvas></div></div></section>
+                
+                <!-- 5. OUTBOUND -->
+                <section id="outbound" class="animate-fade-in"><div class="title-container border-indigo-500"><h3 class="section-title text-indigo-400">Outbound Operations</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-trucks"></canvas></div></div></section>
+                
+                <!-- 6. FLEET -->
+                <section id="transport" class="animate-fade-in"><div class="title-container border-orange-500"><h3 class="section-title text-orange-400">Fleet Management (DSV)</h3></div><div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" id="fleet-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Efficiency Analytics</h4><div class="chart-box"><canvas id="chart-fleet-ops"></canvas></div></div></section>
+                
+                <!-- 7. FINANCE -->
+                <section id="finance" class="animate-fade-in"><div class="title-container border-yellow-500"><h3 class="section-title text-yellow-400">SFDA RSD</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="rsd-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">SAP vs RSD Variance (Units)</h4><div class="chart-box"><canvas id="chart-finance-recon"></canvas></div></div></section>
+                
+                <!-- 8. PENDING -->
+                <section id="pending" class="animate-fade-in mt-16 mb-8"><div class="title-container border-red-600"><h3 class="section-title text-red-500">Pending Actions</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="pod-pending-grid"></div><div class="grid grid-cols-3 gap-6 mb-8" id="return-pending-grid"></div></section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Logic -->
+    <script>
+        // -- CONSTANTS --
+                // -- CONFIG: API BASE (Cloudflare Worker) --
+        const API_BASE = "https://api.wf6638.workers.dev";
+
+        // -- CONSTANTS --
+        const DATA_URL = "https://raw.githubusercontent.com/realwafix/WH/refs/heads/main/main.csv"; // kept for reference
+        const WH_ORDER = ['SPIMACO', 'PROCEED', 'DSV'];
+        const CHART_COLORS = { SPIMACO: '#60a5fa', PROCEED: '#34d399', DSV: '#fb923c' };
+        const COLORS = { 'SPIMACO': 'blue', 'PROCEED': 'green', 'DSV': 'orange', 'default': 'brand' };
+
+
+        let rawData = [];
+        let monthList = [];
+        let chartInstances = {}; // Main charts
+        let sparklineInstances = []; // Tiny charts in cards
+        let presentationInterval;
+        let aiSummaries = {}; // Cache AI responses
+
+        // --- AUTH ---
+        async function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            try {
+                const res = await fetch(`${API_BASE}/api/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+                if (!res.ok) {
+                    document.getElementById('loginError').classList.remove('hidden');
+                    return;
+                }
+                const json = await res.json();
+                // Save token returned by worker
+                localStorage.setItem('DASH_TOKEN', json.token || json.access_token || json.token_value || '');
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('userNameDisplay').textContent = u;
+                document.getElementById('userAvatar').textContent = u.charAt(0).toUpperCase();
+                fetchData();
+            } catch (error) { alert("Error checking users: " + error.message); }
+        }
+
+        // --- DATA ---
+        async function fetchData() {
+            document.getElementById('loadingOverlayData').style.display = 'flex';
+            try {
+                const token = localStorage.getItem('DASH_TOKEN') || '';
+                const res = await fetch(`${API_BASE}/api/data`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!res.ok) throw new Error('Failed to fetch data: ' + res.status);
+                const body = await res.json();
+                const csv = body.csv || '';
+                Papa.parse(csv, {
+                    download: false, header: true, skipEmptyLines: true,
+                    complete: (res) => {
+                        rawData = res.data;
+                        document.getElementById('lastUpdateTxt').innerText = 'Last Sync: ' + new Date().toLocaleTimeString();
+                        document.getElementById('loadingOverlayData').style.display = 'none';
+                        init();
+                        setInterval(fetchData, 300000); // 5 min
+                    }
+                });
+            } catch (err) {
+                document.getElementById('loadingOverlayData').style.display = 'none';
+                alert("Error loading data: " + err.message);
+            }
+        }
+
+        function init() {
+            monthList = [...new Set(rawData.map(d => d.Report_Month))];
+            const sel = document.getElementById('monthSelect');
+            if(sel.options.length === 0) {
+                sel.innerHTML = '<option value="ALL_TOTAL">All Time (Total)</option><option value="ALL_AVG">All Time (Average)</option>';
+                monthList.forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
+                sel.value = monthList[monthList.length - 1];
+                sel.onchange = render;
+            }
+            render();
+        }
+
+        function render() {
+            const cur = document.getElementById('monthSelect').value;
+            let prev = (cur!=='ALL_TOTAL' && cur!=='ALL_AVG') ? monthList[monthList.indexOf(cur)-1] : null;
+            clearGrids();
+            renderOverview(cur, prev);
+            renderQuality(cur, prev);
+            renderStorage(cur, prev);
+            renderInbound(cur, prev);
+            renderOutbound(cur, prev);
+            renderFleet(cur, prev);
+            renderRSD(cur, prev);
+            renderPending(cur, prev);
+            updateAllCharts();
+        }
+
+        // --- SECTIONS ---
+        function renderOverview(c,p){ WH_ORDER.forEach(wh=>{ createCard('row-orders', wh, formatNum(getMetric(c,wh,'Orders/Month')), 'Orders', calcDiff(getMetric(c,wh,'Orders/Month'), getMetric(p,wh,'Orders/Month')), getTrend(wh,'Orders/Month'), 'shopping-cart', COLORS[wh], false, `Total orders processed by ${wh}`); createCard('row-returns', wh, formatNum(getMetric(c,wh,'Returns')), 'Returns', calcDiff(getMetric(c,wh,'Returns'), getMetric(p,wh,'Returns')), getTrend(wh,'Returns'), 'undo', 'red', true, `Customer returns handled by ${wh}`); }); }
+        function renderQuality(c,p){ WH_ORDER.forEach(wh=>{ const h = `<div class="glass-card rounded-2xl p-6 border-l-4 border-green-500 group"><i class="fas fa-info-circle card-info-btn" title="Quality metrics for ${wh}"></i><h4 class="text-slate-400 text-xs font-bold uppercase mb-4">${wh}</h4><div class="space-y-4"><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Accuracy</span><span class="font-bold text-white">${getMetric(c,wh,'Order Accuracy',true).toFixed(1)}%</span></div><div class="w-full bg-dark-700 h-1.5"><div class="bg-green-500 h-1.5" style="width:${getMetric(c,wh,'Order Accuracy',true)}%"></div></div></div></div></div>`; document.getElementById('quality-grid').insertAdjacentHTML('beforeend', h); }); }
+        function renderStorage(c,p){ WH_ORDER.forEach(wh=>{ createCard('storage-grid', wh, ((getMetric(c,wh,'Utalized')/getMetric(c,wh,'Capacity')*100)||0).toFixed(1), '% Util', 0, getTrendStorage(wh), 'warehouse', COLORS[wh], false, `Storage utilization vs capacity`); }); }
+        function renderInbound(c,p){ renderMetricGroup('inbound-cases-grid', c, p, 'inbound Case', 'Box'); renderMetricGroup('inbound-pallets-grid', c, p, 'Inbound Pallets', 'Plt'); renderMetricGroup('inbound-trucks-grid', c, p, 'Inbound Trucks 45 ft', 'Trk'); }
+        function renderOutbound(c,p){ renderMetricGroup('outbound-cases-grid', c, p, 'Outbound Case', 'Box'); renderMetricGroup('outbound-pallets-grid', c, p, 'Outbound Pallets', 'Plt'); renderMetricGroup('outbound-trucks-grid', c, p, 'Outbound Trucks 45 ft', 'Trk'); }
+        function renderFleet(c,p){ 
+            const wh='DSV'; 
+            createCard('fleet-grid', 'Dedicated 45ft', formatNum(getMetric(c,wh,"DEDICATED TRUCK 45'FT")), 'Trucks', calcDiff(getMetric(c,wh,"DEDICATED TRUCK 45'FT"), getMetric(p,wh,"DEDICATED TRUCK 45'FT")), getTrend(wh,"DEDICATED TRUCK 45'FT"), 'truck-fast', 'orange', false, 'Long Haul Fleet');
+            createCard('fleet-grid', 'Dedicated 10 Ton', formatNum(getMetric(c,wh,"DEDICATED TRUCK 10 TON")), 'Trucks', calcDiff(getMetric(c,wh,"DEDICATED TRUCK 10 TON"), getMetric(p,wh,"DEDICATED TRUCK 10 TON")), getTrend(wh,"DEDICATED TRUCK 10 TON"), 'truck-loading', 'orange', false, 'Distribution Fleet'); 
+            createCard('fleet-grid', 'Total Trips', formatNum(getMetric(c,wh,'TOTAL TRIPS')), '#', calcDiff(getMetric(c,wh,'TOTAL TRIPS'), getMetric(p,wh,'TOTAL TRIPS')), getTrend(wh,'TOTAL TRIPS'), 'route', 'orange', false, 'Trips made'); 
+            createCard('fleet-grid', 'Destinations', formatNum(getMetric(c,wh,'TOTAL DESTINATIONS')), '#', calcDiff(getMetric(c,wh,'TOTAL DESTINATIONS'), getMetric(p,wh,'TOTAL DESTINATIONS')), getTrend(wh,'TOTAL DESTINATIONS'), 'map-marker-alt', 'orange', false, 'Drop points'); 
+        }
+        function renderRSD(c,p){ WH_ORDER.forEach(wh=>{ createCard('rsd-grid', wh, (100-(Math.abs(getMetric(c,wh,'SAP')-getMetric(c,wh,'RSD'))/getMetric(c,wh,'SAP')*100)||100).toFixed(2), '% Match', 0, getTrendRSD(wh), 'check-double', 'green', false, `SAP vs RSD Inventory Match`); }); }
+        function renderPending(c,p){ WH_ORDER.forEach(wh=>{ createCard('pod-pending-grid', wh, getMetric(c,wh,'POD pending'), 'Docs', 0, getTrend(wh,'POD pending'), 'file-signature', 'red', true, 'Pending PODs'); createCard('return-pending-grid', wh, getMetric(c,wh,'Return pending'), 'Items', 0, getTrend(wh,'Return pending'), 'box-open', 'red', true, 'Pending Returns'); }); }
+        function renderMetricGroup(id, c, p, col, unit) { WH_ORDER.forEach(wh=>{ createCard(id, wh, formatNum(getMetric(c,wh,col)), unit, calcDiff(getMetric(c,wh,col), getMetric(p,wh,col)), getTrend(wh,col), 'box', COLORS[wh], false, `${col} volume for ${wh}`); }); }
+
+        // --- CORE UTILS ---
+        function clearGrids() { 
+            // Destroy all sparklines first
+            sparklineInstances.forEach(c => c.destroy());
+            sparklineInstances = [];
+            
+            ['row-orders','row-returns','quality-grid','storage-grid','inbound-cases-grid','inbound-pallets-grid','inbound-trucks-grid','outbound-cases-grid','outbound-pallets-grid','outbound-trucks-grid','fleet-grid','rsd-grid','pod-pending-grid','return-pending-grid'].forEach(id => document.getElementById(id).innerHTML=''); 
+        }
+
+        function createCard(id, title, val, unit, diff, trend, icon, color, bad=false, tooltip='Data Metric') {
+            const colors = { blue: '#3b82f6', green: '#10b981', orange: '#f97316', red: '#ef4444', indigo: '#6366f1', brand: '#6366f1' };
+            const cHex = colors[color] || colors.brand;
+            let badge = '';
+            
+            // Pending Logic
+            const isPending = id.includes('pending');
+            const numVal = parseNum(val);
+            const style = (isPending && numVal > 0) ? `border-left-color: #ef4444` : `border-left-color: ${cHex}`;
+            if(isPending && numVal > 0) badge = `<span class="ml-2 bg-red-500/20 text-red-400 text-[9px] font-bold px-2 py-0.5 rounded animate-pulse">ACTION</span>`;
+
+            // Hover overlay logic (Last 3 months)
+            const last3 = trend.slice(-3).reverse();
+            const hoverHtml = `
+                <div class="card-details-overlay rounded-xl">
+                    <p class="text-xs font-bold text-brand-400 uppercase mb-2 border-b border-brand-500/30 pb-1">Trend (Last 3M)</p>
+                    ${last3.map((v,i) => `<div class="flex justify-between text-xs py-1 border-b border-white/5 last:border-0"><span class="text-slate-400">M-${i}</span><span class="text-white font-mono">${formatNum(v)}</span></div>`).join('')}
+                </div>
+            `;
+
+            const cardId = `c-${Math.random().toString(36).substr(2,9)}`;
+            
+            // Diff arrow
+            let diffHtml = '<span class="text-slate-500 text-xs">-</span>';
+            if(diff!=0 && !isNaN(diff)) {
+                const isPos = diff > 0;
+                const isGood = bad ? !isPos : isPos;
+                const clr = isGood ? 'text-green-400' : 'text-red-400';
+                diffHtml = `<span class="${clr} text-xs font-bold ml-2 bg-dark-900/50 px-2 py-0.5 rounded"><i class="fas fa-arrow-${isPos?'up':'down'}"></i> ${Math.abs(diff)}%</span>`;
+            }
+
+            const html = `
+                <div class="glass-card rounded-2xl p-6 border-l-4 group" style="${style}">
+                    ${hoverHtml}
+                    <i class="fas fa-info-circle card-info-btn" title="${tooltip}"></i>
+                    <div class="flex justify-between items-start mb-3 relative z-10">
+                        <div class="w-full">
+                             <div class="flex items-center mb-1"><h4 class="text-slate-400 text-[10px] font-bold uppercase tracking-widest group-hover:text-white transition-colors">${title}</h4>${badge}</div>
+                             <div class="flex items-baseline gap-2"><span class="text-3xl font-bold text-white num-font">${val}</span><span class="text-xs text-slate-500">${unit}</span></div>
+                        </div>
+                        <div class="h-10 w-10 shrink-0 rounded-full bg-dark-800/50 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform"><i class="fas fa-${icon} text-lg" style="color:${cHex}"></i></div>
+                    </div>
+                    <div class="flex items-center justify-between relative z-10">${diffHtml}</div>
+                    <div class="sparkline-container relative z-10"><canvas id="${cardId}"></canvas></div>
+                </div>`;
+            document.getElementById(id).insertAdjacentHTML('beforeend', html);
+            
+            setTimeout(()=>{
+                const cvs = document.getElementById(cardId);
+                if(cvs) {
+                    const chart = new Chart(cvs,{type:'line',data:{labels:trend.map((_,i)=>i),datasets:[{data:trend,borderColor:cHex,borderWidth:2,pointRadius:0,fill:{target:'origin',above:cHex+'15'}}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{display:false},y:{display:false}},plugins:{legend:{display:false}}}});
+                    sparklineInstances.push(chart);
+                }
+            },50);
+        }
+
+        // --- AI SUMMARY TOGGLE ---
+        function toggleAiSummary() {
+            const sec = document.getElementById('aiSummarySection');
+            if(sec.classList.contains('hidden')) { sec.classList.remove('hidden'); generateAiReport(); } else { sec.classList.add('hidden'); }
+        }
+        function hideAiSummary() { document.getElementById('aiSummarySection').classList.add('hidden'); }
+        async function generateAiReport() {
+            const m = document.getElementById('monthSelect').value;
+            const content = document.getElementById('aiSummaryContent');
+            const load = document.getElementById('aiLoadingState');
+            content.innerHTML=''; load.classList.remove('hidden');
+            const prompt = `Act as Logistics Director. Summary for ${m}. Sections: Verdict, Risks, Warehouse Perf, Actions. Markdown.`;
+            try {
+                const token = localStorage.getItem('DASH_TOKEN') || '';
+                const res = await fetch(`${API_BASE}/api/ai`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ prompt })
+                });
+                if(!res.ok) throw new Error('AI call failed: ' + res.status);
+                const json = await res.json();
+                // Support both direct Gemini response or proxied wrapper
+                let text = "";
+                try {
+                    // typical Gemini response: json.candidates[0].content.parts[0].text
+                    text = json.candidates?.[0]?.content?.parts?.[0]?.text || json.output || JSON.stringify(json);
+                } catch(e) { text = JSON.stringify(json); }
+                content.innerHTML = marked.parse(text);
+            } catch(e) { content.innerHTML = "Error generating report: " + (e.message || e); } finally { load.classList.add('hidden'); }
+        }
+
+        // --- METRIC UTILS (V16 Logic + Guard) ---
+        function getMetric(m, wh, col, pct=false) { 
+            if (!m) return 0; // Guard clause
+            if(m.startsWith('ALL')) {
+                const rows = rawData.filter(d => d.Warehouse_Name.toUpperCase().includes(wh));
+                if(!rows.length) return 0;
+                let sum=0, count=0;
+                rows.forEach(r => { 
+                    const v = parseNum(r[col]); 
+                    if(r[col] && !['NA','-',''].includes(r[col].toString().trim())) { sum+=v; count++; }
+                });
+                return (pct || m==='ALL_AVG') ? (count?sum/count:0) : sum;
+            }
+            const r = rawData.find(d => d.Report_Month === m && d.Warehouse_Name.toUpperCase().includes(wh)); 
+            if(!r) return 0; return parseNum(r[col]); 
+        }
+        function parseNum(val) { if(!val) return 0; let s = val.toString().trim(); if(s==='NA'||s==='-'||s.includes('<')) return 0; return parseFloat(s.replace(/%/g, '').replace(/,/g, '')); }
+        function formatNum(n) { return n.toLocaleString('en-US'); }
+        function calcDiff(c, p) { return p ? ((c-p)/p*100).toFixed(1) : 0; }
+        function getTrend(wh, col) { return monthList.slice(Math.max(0, monthList.length-6)).map(m => getMetric(m, wh, col)); }
+        function getTrendStorage(wh) { return monthList.slice(Math.max(0, monthList.length-6)).map(m => { let c=getMetric(m,wh,'Capacity'); let u=getMetric(m,wh,'Utalized')||getMetric(m,wh,'Average storage in the warehouse'); return c>0?(u/c*100):0; }); }
+        function getTrendRSD(wh) { return monthList.slice(Math.max(0, monthList.length-6)).map(m => { let s=getMetric(m,wh,'SAP'); let r=getMetric(m,wh,'RSD'); return Math.max(s,r)>0 ? 100-(Math.abs(s-r)/Math.max(s,r)*100) : 0; }); }
+        function getSectionData(col) { return WH_ORDER.map(w => ({ wh: w, val: getMetric(document.getElementById('monthSelect').value, w, col) })); }
+        function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
+
+        // --- Chart Configs ---
+        function updateAllCharts() { Object.keys(chartInstances).forEach(k=>{if(chartInstances[k])chartInstances[k].destroy();delete chartInstances[k];}); ['chart-orders-trend', 'chart-orders-dist', 'chart-quality-comp', 'chart-storage-trend', 'chart-storage-bar', 'chart-inbound-vol', 'chart-inbound-trucks', 'chart-outbound-vol', 'chart-outbound-trucks', 'chart-fleet-ops', 'chart-finance-recon'].forEach(id => renderSpecificChart(id, id)); }
+        function renderSpecificChart(type, targetId) { const ctx = document.getElementById(targetId); if(!ctx) return; 
+            let config=null;
+            if (type==='chart-inbound-vol') config=getBarConfig('inbound Case');
+            else if (type==='chart-inbound-trucks') config=getBarConfig('Inbound Trucks 45 ft');
+            else if (type==='chart-outbound-vol') config=getBarConfig('Outbound Case');
+            else if (type==='chart-outbound-trucks') config=getBarConfig('Outbound Trucks 45 ft');
+            else if (type==='chart-storage-trend') config=getMultiBarConfig();
+            else if (type==='chart-storage-bar') config=getSingleBarConfig();
+            else if (type==='chart-orders-trend') config=getLineConfig('Orders/Month');
+            else if (type==='chart-fleet-ops') config=getFleetConfig();
+            else if (type==='chart-finance-recon') config=getFinanceConfig();
+            else if (type==='chart-orders-dist') config=getDoughnutConfig('Orders/Month');
+            else if (type==='chart-quality-comp') config=getGroupedBarConfig(['Order Accuracy', 'Order Fill Rate']);
+            if(config) chartInstances[targetId] = new Chart(ctx, config);
+        }
+        function getBarConfig(col) { return { type: 'bar', data: { labels: monthList, datasets: WH_ORDER.map(wh => ({ label: wh, data: monthList.map(m => getMetric(m, wh, col)), backgroundColor: CHART_COLORS[wh] })) }, options: { responsive: true, maintainAspectRatio: false, scales: {x:{stacked:true}, y:{stacked:true}} } }; }
+        function getLineConfig(col) { return { type: 'line', data: { labels: monthList, datasets: WH_ORDER.map(wh => ({ label: wh, data: monthList.map(m => getMetric(m, wh, col)), borderColor: CHART_COLORS[wh] })) }, options: { responsive: true, maintainAspectRatio: false } }; }
+        function getMultiBarConfig() { return { type: 'bar', data: { labels: monthList, datasets: [{ label: 'Capacity', data: monthList.map(m => WH_ORDER.reduce((a,w)=>a+getMetric(m,w,'Capacity'),0)), backgroundColor: '#334155' }, { label: 'Utilized', data: monthList.map(m => WH_ORDER.reduce((a,w)=>a+(getMetric(m,w,'Utalized')||getMetric(m,w,'Average storage in the warehouse')),0)), backgroundColor: '#8b5cf6' }] }, options: { responsive: true, maintainAspectRatio: false } }; }
+        function getSingleBarConfig() { const cur = document.getElementById('monthSelect').value; return { type: 'bar', data: { labels: WH_ORDER, datasets: [{ label: 'Util %', data: WH_ORDER.map(w => (getMetric(cur,w,'Utalized')/getMetric(cur,w,'Capacity')*100)||0), backgroundColor: [CHART_COLORS.SPIMACO, CHART_COLORS.PROCEED, CHART_COLORS.DSV] }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false } }; }
+        function getFleetConfig() { return { type: 'bar', data: { labels: monthList, datasets: [{ label: 'Trips', data: monthList.map(m=>getMetric(m,'DSV','TOTAL TRIPS')), backgroundColor:'#f97316' }] }, options: { responsive: true, maintainAspectRatio: false } }; }
+        function getFinanceConfig() { return { type: 'bar', data: { labels: monthList, datasets: WH_ORDER.map(w => ({ label: w, data: monthList.map(m=>getMetric(m,w,'SAP')-getMetric(m,w,'RSD')), backgroundColor: CHART_COLORS[w] })) }, options: { responsive: true, maintainAspectRatio: false, scales:{x:{stacked:true}, y:{stacked:true}} } }; }
+        function getDoughnutConfig(col) { const cur = document.getElementById('monthSelect').value; const totals = WH_ORDER.map(w => getMetric(cur, w, col)); return { type: 'doughnut', data: { labels: WH_ORDER, datasets: [{ data: totals, backgroundColor: ['#60a5fa', '#34d399', '#fb923c'] }] }, options: { responsive: true, maintainAspectRatio: false } }; }
+        function getGroupedBarConfig(cols) { const cur = document.getElementById('monthSelect').value; const datasets = cols.map((col, idx) => ({ label: col, data: WH_ORDER.map(w => getMetric(cur, w, col, true)), backgroundColor: idx===0?'#60a5fa':'#34d399' })); return { type: 'bar', data: { labels: WH_ORDER, datasets }, options: { responsive: true, maintainAspectRatio: false } }; }
+
+        // --- CINEMA MODE & AI ---
+        async function startSmartPresentation() {
+            const cur = document.getElementById('monthSelect').value;
+            document.body.classList.add('cinema-mode');
+            document.documentElement.requestFullscreen().catch(()=>{});
+            document.getElementById('normal-dashboard-view').classList.add('hidden');
+            
+            // Re-fetch AI if needed
+            if(!aiSummaries[cur]) {
+                document.getElementById('aiProcessingOverlay').classList.remove('hidden');
+                await fetchStructuredAI(cur);
+                document.getElementById('aiProcessingOverlay').classList.add('hidden');
+            }
+            injectAiText();
+            
+            // Populate Slides (Cloning charts logic)
+            const map = { 'slide-inbound': ['inbound-cases-grid','chart-inbound-vol'], 'slide-outbound': ['outbound-cases-grid','chart-outbound-vol'], 'slide-storage': ['storage-grid','chart-storage-trend'], 'slide-fleet': ['fleet-grid','chart-fleet-ops'], 'slide-finance': ['rsd-grid','chart-finance-recon'], 'slide-overview': ['row-orders','chart-orders-trend'] };
+            Object.keys(map).forEach(sid => populateSlide(sid, map[sid]));
+            
+            let slides = Object.keys(map);
+            let idx = 0;
+            const run = () => {
+                document.querySelectorAll('.presentation-slide').forEach(s => s.classList.remove('active'));
+                document.getElementById(slides[idx]).classList.add('active');
+                const bar = document.getElementById('slideProgress');
+                bar.style.transition='none'; bar.style.width='0%';
+                setTimeout(()=>{ bar.style.transition='width 15s linear'; bar.style.width='100%'; },50);
+                idx = (idx+1)%slides.length;
+            };
+            run();
+            presentationInterval = setInterval(run, 15000);
+        }
+
+        function stopPresentation() {
+            document.body.classList.remove('cinema-mode');
+            if(document.fullscreenElement) document.exitFullscreen();
+            document.getElementById('normal-dashboard-view').classList.remove('hidden');
+            document.querySelectorAll('.presentation-slide').forEach(s => s.classList.remove('active'));
+            clearInterval(presentationInterval);
+            render(); // Restore main charts
+        }
+
+        function populateSlide(sid, ids) {
+            const con = document.getElementById(sid.replace('slide-','slide-content-'));
+            con.innerHTML = '';
+            ids.forEach(id => {
+                if(id.includes('grid')||id.includes('row')) {
+                    const clone = document.getElementById(id).cloneNode(true);
+                    // Strip IDs to avoid conflict
+                    clone.removeAttribute('id');
+                    // Remove existing canvases in clone (charts break on clone)
+                    clone.querySelectorAll('canvas').forEach(c=>c.remove()); 
+                    con.appendChild(clone);
+                } else if(id.includes('chart')) {
+                    const w = document.createElement('div'); w.className="glass-card rounded-2xl p-6 chart-box h-80";
+                    const c = document.createElement('canvas'); c.id = id+'-slide';
+                    w.appendChild(c); con.appendChild(w);
+                    renderSpecificChart(id, c.id);
+                }
+            });
+        }
+        
+        async function fetchStructuredAI(month) {
+            const ctx = { period: month, inbound: getSectionData('inbound Case'), outbound: getSectionData('Outbound Case') };
+            const prompt = `Analyze Logistics for ${month}: ${JSON.stringify(ctx)} Output STRICT JSON with keys: inbound, outbound, storage, fleet, finance, overview. 2-sentence summary each.`;
+            try {
+                const token = localStorage.getItem('DASH_TOKEN') || '';
+                const res = await fetch(`${API_BASE}/api/ai`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify({ prompt })
+                });
+                if(!res.ok) throw new Error('AI call failed: ' + res.status);
+                const json = await res.json();
+                // support proxied gemini response which contains text block with JSON inside
+                let txt = "";
+                try {
+                    txt = json.candidates?.[0]?.content?.parts?.[0]?.text || json.output || JSON.stringify(json);
+                    txt = txt.replace(/```json/g,'').replace(/```/g,'');
+                    aiSummaries[month] = JSON.parse(txt);
+                } catch(e) { console.log('AI parse error', e); aiSummaries[month] = {}; }
+            } catch(e) { console.log(e); }
+        }
+        function injectAiText() {
+            const d = aiSummaries[document.getElementById('monthSelect').value];
+            if(!d) return;
+            ['inbound','outbound','storage','fleet','finance','overview'].forEach(k => {
+                const el = document.getElementById(`ai-text-${k}`); if(el) el.innerHTML=marked.parse(d[k]||'');
+            });
+        }
+
+    </script>
+</body>
+</html>
