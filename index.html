@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3PL KPI MONTHLY | V26 Fixed</title>
+    <title>3PL KPI MONTHLY | V26 Secure</title>
     
-    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
-    <!-- Configuration -->
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -138,7 +136,6 @@
 </head>
 <body class="flex h-screen overflow-hidden">
 
-    <!-- LOGIN SCREEN -->
     <div id="loginOverlay">
         <div class="bg-dark-800 p-8 rounded-2xl border border-dark-600 shadow-2xl w-96 text-center">
             <div class="mb-6 flex justify-center">
@@ -164,24 +161,20 @@
         </div>
     </div>
 
-    <!-- Presentation Controls -->
     <button id="exitCinemaBtn" onclick="stopPresentation()"><i class="fas fa-times mr-2"></i> Exit Presentation</button>
     <div id="slideProgress"></div>
 
-    <!-- Loading Overlay Data -->
     <div id="loadingOverlayData" class="fixed inset-0 z-50 bg-dark-900 flex flex-col items-center justify-center hidden">
         <div class="w-16 h-16 border-4 border-dark-700 border-t-brand-500 rounded-full animate-spin mb-4"></div>
-        <p class="text-slate-400 font-mono text-sm">Fetching Data...</p>
+        <p class="text-slate-400 font-mono text-sm">Fetching Secure Data...</p>
     </div>
 
-    <!-- AI PROCESSING OVERLAY -->
     <div id="aiProcessingOverlay" class="fixed inset-0 z-[60] bg-dark-900/95 flex flex-col items-center justify-center hidden">
         <div class="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
         <h3 class="text-2xl font-bold text-white animate-pulse">Generating Presentation...</h3>
-        <p class="text-slate-400 mt-2">Asking Gemini to analyze each section separately</p>
+        <p class="text-slate-400 mt-2">Asking Gemini (via Secure Worker) to analyze each section</p>
     </div>
 
-    <!-- Sidebar -->
     <aside class="w-20 md:w-72 bg-dark-800 border-r border-dark-700 flex flex-col z-20 hidden md:flex transition-all">
         <div class="h-20 flex items-center justify-center md:justify-start md:px-8 border-b border-dark-700 bg-dark-900/50">
             <div class="h-10 w-10 bg-brand-600 rounded-lg flex items-center justify-center shadow-lg"><i class="fas fa-cubes-stacked text-white text-lg"></i></div>
@@ -207,9 +200,7 @@
         </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="flex-1 flex flex-col h-full relative bg-dark-900">
-        <!-- Header -->
         <header class="h-20 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-8 z-30">
             <div><h2 class="text-xl font-bold text-white tracking-tight">Dashboard Overview</h2><p class="text-xs text-slate-400 mt-1" id="lastUpdateTxt">Last Sync: ...</p></div>
             <div class="flex items-center gap-4">
@@ -220,10 +211,8 @@
             </div>
         </header>
 
-        <!-- Content Area -->
         <div id="contentArea" class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
             
-            <!-- AI SUMMARY INLINE (Hidden) -->
             <div id="aiSummarySection" class="hidden mb-8 animate-slide-down">
                 <div class="ai-card rounded-2xl p-8 relative overflow-hidden" style="background: linear-gradient(145deg, rgba(139,92,246,0.1), rgba(15,23,42,0.6)); border: 1px solid rgba(139,92,246,0.2);">
                     <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><i class="fas fa-brain text-[150px] text-purple-500"></i></div>
@@ -235,13 +224,12 @@
                         <button onclick="hideAiSummary()" class="text-slate-400 hover:text-white bg-dark-900/50 hover:bg-dark-900 rounded-lg p-2 transition-colors"><i class="fas fa-times"></i></button>
                     </div>
                     <div id="aiLoadingState" class="hidden py-8 flex flex-col items-center justify-center">
-                        <div class="flex items-center gap-2 mb-2"><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-100"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></span></div><p class="text-sm text-purple-300 animate-pulse">Analyzing dashboard metrics...</p>
+                        <div class="flex items-center gap-2 mb-2"><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-100"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></span></div><p class="text-sm text-purple-300 animate-pulse">Analyzing dashboard metrics via Secure Worker...</p>
                     </div>
                     <div id="aiSummaryContent" class="prose-invert text-sm max-w-none text-slate-300 relative z-10"></div>
                 </div>
             </div>
 
-            <!-- === PRESENTATION SLIDES (Hidden in Normal View) === -->
             <div id="slide-overview" class="presentation-slide hidden">
                 <div class="title-container border-brand-500 mb-4"><h3 class="section-title text-brand-400">Executive Overview</h3></div>
                 <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-overview" class="text-slate-200 text-sm"></div></div>
@@ -273,94 +261,92 @@
                 <div id="slide-content-finance" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
             </div>
 
-            <!-- === NORMAL DASHBOARD VIEW === -->
             <div id="normal-dashboard-view" class="space-y-16 pb-20">
                 
-                <!-- 1. OVERVIEW -->
                 <section id="overview" class="animate-fade-in"><div class="title-container border-brand-500"><h3 class="section-title text-brand-400">Performance Overview</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-orders"></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-returns"></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10"><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Total Orders Trend</h4></div><div class="chart-box"><canvas id="chart-orders-trend"></canvas></div></div><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Market Share</h4></div><div class="chart-box"><canvas id="chart-orders-dist"></canvas></div></div></div></section>
                 
-                <!-- 2. QUALITY -->
                 <section id="quality" class="animate-fade-in"><div class="title-container border-emerald-500"><h3 class="section-title text-emerald-400">Quality Standards</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="quality-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Comparative Quality Metrics</h4><div class="chart-box"><canvas id="chart-quality-comp"></canvas></div></div></section>
                 
-                <!-- 3. STORAGE -->
                 <section id="storage" class="animate-fade-in"><div class="title-container border-purple-500"><h3 class="section-title text-purple-400">Warehouse Capacity</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="storage-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-storage-trend"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-storage-bar"></canvas></div></div></section>
                 
-                <!-- 4. INBOUND -->
                 <section id="inbound" class="animate-fade-in"><div class="title-container border-blue-500"><h3 class="section-title text-blue-400">Inbound Operations</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-trucks"></canvas></div></div></section>
                 
-                <!-- 5. OUTBOUND -->
                 <section id="outbound" class="animate-fade-in"><div class="title-container border-indigo-500"><h3 class="section-title text-indigo-400">Outbound Operations</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-trucks"></canvas></div></div></section>
                 
-                <!-- 6. FLEET -->
                 <section id="transport" class="animate-fade-in"><div class="title-container border-orange-500"><h3 class="section-title text-orange-400">Fleet Management (DSV)</h3></div><div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" id="fleet-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Efficiency Analytics</h4><div class="chart-box"><canvas id="chart-fleet-ops"></canvas></div></div></section>
                 
-                <!-- 7. FINANCE -->
-                <section id="finance" class="animate-fade-in"><div class="title-container border-yellow-500"><h3 class="section-title text-yellow-400">SFDA RSD</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="rsd-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">SAP vs RSD Variance (Units)</h4><div class="chart-box"><canvas id="chart-finance-recon"></canvas></div></div></section>
+                <section id="finance" class="animate-fade-in"><div class="title-container border-yellow-500"><h3 class="section-title text-yellow-400">SFDA RSD</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="rsd-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">SAP vs RSD 
+Variance (Units)</h4><div class="chart-box"><canvas id="chart-finance-recon"></canvas></div></div></section>
                 
-                <!-- 8. PENDING -->
                 <section id="pending" class="animate-fade-in mt-16 mb-8"><div class="title-container border-red-600"><h3 class="section-title text-red-500">Pending Actions</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="pod-pending-grid"></div><div class="grid grid-cols-3 gap-6 mb-8" id="return-pending-grid"></div></section>
             </div>
         </div>
     </main>
 
-    <!-- Logic -->
     <script>
         // -- CONSTANTS --
-                // -- CONFIG: API BASE (Cloudflare Worker) --
-        const API_BASE = "https://api.wf6638.workers.dev";
-
-        // -- CONSTANTS --
-        const DATA_URL = "https://raw.githubusercontent.com/realwafix/WH/refs/heads/main/main.csv"; // kept for reference
+        // SECURE UPDATE: Hardcoded URLs and Keys removed. Pointing to Cloudflare Worker.
+        const WORKER_URL = "https://api.wf6638.workers.dev";
         const WH_ORDER = ['SPIMACO', 'PROCEED', 'DSV'];
         const CHART_COLORS = { SPIMACO: '#60a5fa', PROCEED: '#34d399', DSV: '#fb923c' };
         const COLORS = { 'SPIMACO': 'blue', 'PROCEED': 'green', 'DSV': 'orange', 'default': 'brand' };
 
-
         let rawData = [];
         let monthList = [];
-        let chartInstances = {}; // Main charts
-        let sparklineInstances = []; // Tiny charts in cards
+        let chartInstances = {}; 
+        let sparklineInstances = []; 
         let presentationInterval;
-        let aiSummaries = {}; // Cache AI responses
+        let aiSummaries = {};
+        
+        // SESSION TOKEN STORAGE
+        let sessionToken = null;
 
-        // --- AUTH ---
+        // --- AUTH (VIA WORKER) ---
         async function handleLogin(e) {
             e.preventDefault();
             const u = document.getElementById('username').value.trim();
             const p = document.getElementById('password').value.trim();
+            
             try {
-                const res = await fetch(`${API_BASE}/api/login`, {
+                // Secure Login request to Worker
+                const response = await fetch(`${WORKER_URL}/api/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ Username: u, Password: p })
+                    body: JSON.stringify({ username: u, password: p })
                 });
-                if (!res.ok) {
+
+                if (response.ok) {
+                    const data = await response.json();
+                    sessionToken = data.token; // Store token for subsequent requests
+                    
+                    document.getElementById('loginOverlay').style.display = 'none';
+                    document.getElementById('userNameDisplay').textContent = u;
+                    document.getElementById('userAvatar').textContent = u.charAt(0).toUpperCase();
+                    fetchData();
+                } else {
                     document.getElementById('loginError').classList.remove('hidden');
-                    return;
                 }
-                const json = await res.json();
-                // Save token returned by worker
-                localStorage.setItem('DASH_TOKEN', json.token || json.access_token || json.token_value || '');
-                document.getElementById('loginOverlay').style.display = 'none';
-                document.getElementById('userNameDisplay').textContent = u;
-                document.getElementById('userAvatar').textContent = u.charAt(0).toUpperCase();
-                fetchData();
-            } catch (error) { alert("Error checking users: " + error.message); }
+            } catch (error) {
+                alert("Login Error: " + error.message);
+            }
         }
 
-        // --- DATA ---
+        // --- DATA FETCH (VIA WORKER) ---
         async function fetchData() {
             document.getElementById('loadingOverlayData').style.display = 'flex';
+            
             try {
-                const token = localStorage.getItem('DASH_TOKEN') || '';
-                const res = await fetch(`${API_BASE}/api/data`, {
-                    headers: { 'Authorization': 'Bearer ' + token }
+                const response = await fetch(`${WORKER_URL}/api/data`, {
+                    headers: { 'Authorization': 'Bearer ' + sessionToken }
                 });
-                if (!res.ok) throw new Error('Failed to fetch data: ' + res.status);
-                const body = await res.json();
-                const csv = body.csv || '';
-                Papa.parse(csv, {
-                    download: false, header: true, skipEmptyLines: true,
+
+                if (!response.ok) throw new Error("Failed to fetch data");
+
+                const json = await response.json();
+                
+                // Parse the CSV returned by the Worker
+                Papa.parse(json.csv, {
+                    header: true, skipEmptyLines: true,
                     complete: (res) => {
                         rawData = res.data;
                         document.getElementById('lastUpdateTxt').innerText = 'Last Sync: ' + new Date().toLocaleTimeString();
@@ -369,9 +355,11 @@
                         setInterval(fetchData, 300000); // 5 min
                     }
                 });
-            } catch (err) {
-                document.getElementById('loadingOverlayData').style.display = 'none';
-                alert("Error loading data: " + err.message);
+
+            } catch (error) {
+                console.error(error);
+                alert("Session expired or data error. Please reload.");
+                location.reload();
             }
         }
 
@@ -484,35 +472,42 @@
             },50);
         }
 
-        // --- AI SUMMARY TOGGLE ---
+        // --- AI SUMMARY TOGGLE (SECURE) ---
         function toggleAiSummary() {
             const sec = document.getElementById('aiSummarySection');
             if(sec.classList.contains('hidden')) { sec.classList.remove('hidden'); generateAiReport(); } else { sec.classList.add('hidden'); }
         }
         function hideAiSummary() { document.getElementById('aiSummarySection').classList.add('hidden'); }
+        
         async function generateAiReport() {
             const m = document.getElementById('monthSelect').value;
             const content = document.getElementById('aiSummaryContent');
             const load = document.getElementById('aiLoadingState');
             content.innerHTML=''; load.classList.remove('hidden');
             const prompt = `Act as Logistics Director. Summary for ${m}. Sections: Verdict, Risks, Warehouse Perf, Actions. Markdown.`;
+            
             try {
-                const token = localStorage.getItem('DASH_TOKEN') || '';
-                const res = await fetch(`${API_BASE}/api/ai`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ prompt })
+                // Call Worker AI Endpoint
+                const res = await fetch(`${WORKER_URL}/api/ai`, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionToken 
+                    }, 
+                    body: JSON.stringify({ prompt: prompt }) 
                 });
-                if(!res.ok) throw new Error('AI call failed: ' + res.status);
+                
+                if (!res.ok) throw new Error("AI Service Failed");
+
                 const json = await res.json();
-                // Support both direct Gemini response or proxied wrapper
-                let text = "";
-                try {
-                    // typical Gemini response: json.candidates[0].content.parts[0].text
-                    text = json.candidates?.[0]?.content?.parts?.[0]?.text || json.output || JSON.stringify(json);
-                } catch(e) { text = JSON.stringify(json); }
+                const text = json.candidates[0].content.parts[0].text;
                 content.innerHTML = marked.parse(text);
-            } catch(e) { content.innerHTML = "Error generating report: " + (e.message || e); } finally { load.classList.add('hidden'); }
+            } catch(e) { 
+                console.error(e);
+                content.innerHTML = "Error generating report. Check permissions."; 
+            } finally { 
+                load.classList.add('hidden'); 
+            }
         }
 
         // --- METRIC UTILS (V16 Logic + Guard) ---
@@ -566,7 +561,7 @@
         function getDoughnutConfig(col) { const cur = document.getElementById('monthSelect').value; const totals = WH_ORDER.map(w => getMetric(cur, w, col)); return { type: 'doughnut', data: { labels: WH_ORDER, datasets: [{ data: totals, backgroundColor: ['#60a5fa', '#34d399', '#fb923c'] }] }, options: { responsive: true, maintainAspectRatio: false } }; }
         function getGroupedBarConfig(cols) { const cur = document.getElementById('monthSelect').value; const datasets = cols.map((col, idx) => ({ label: col, data: WH_ORDER.map(w => getMetric(cur, w, col, true)), backgroundColor: idx===0?'#60a5fa':'#34d399' })); return { type: 'bar', data: { labels: WH_ORDER, datasets }, options: { responsive: true, maintainAspectRatio: false } }; }
 
-        // --- CINEMA MODE & AI ---
+        // --- CINEMA MODE & AI (SECURE) ---
         async function startSmartPresentation() {
             const cur = document.getElementById('monthSelect').value;
             document.body.classList.add('cinema-mode');
@@ -631,24 +626,26 @@
         async function fetchStructuredAI(month) {
             const ctx = { period: month, inbound: getSectionData('inbound Case'), outbound: getSectionData('Outbound Case') };
             const prompt = `Analyze Logistics for ${month}: ${JSON.stringify(ctx)} Output STRICT JSON with keys: inbound, outbound, storage, fleet, finance, overview. 2-sentence summary each.`;
+            
             try {
-                const token = localStorage.getItem('DASH_TOKEN') || '';
-                const res = await fetch(`${API_BASE}/api/ai`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                    body: JSON.stringify({ prompt })
+                // Secure Worker Call
+                const res = await fetch(`${WORKER_URL}/api/ai`, { 
+                    method: 'POST', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + sessionToken 
+                    }, 
+                    body: JSON.stringify({ prompt: prompt }) 
                 });
-                if(!res.ok) throw new Error('AI call failed: ' + res.status);
+                
+                if (!res.ok) throw new Error("AI Structured Fetch Failed");
+
                 const json = await res.json();
-                // support proxied gemini response which contains text block with JSON inside
-                let txt = "";
-                try {
-                    txt = json.candidates?.[0]?.content?.parts?.[0]?.text || json.output || JSON.stringify(json);
-                    txt = txt.replace(/```json/g,'').replace(/```/g,'');
-                    aiSummaries[month] = JSON.parse(txt);
-                } catch(e) { console.log('AI parse error', e); aiSummaries[month] = {}; }
+                let txt = json.candidates[0].content.parts[0].text.replace(/```json/g,'').replace(/```/g,'');
+                aiSummaries[month] = JSON.parse(txt);
             } catch(e) { console.log(e); }
         }
+
         function injectAiText() {
             const d = aiSummaries[document.getElementById('monthSelect').value];
             if(!d) return;
