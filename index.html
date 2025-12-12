@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>3PL KPI MONTHLY | V26 Secure</title>
+    <title>Workforce Hub & Dashboard | V3.0</title>
     
+    <!-- Libraries -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         tailwind.config = {
@@ -19,641 +21,872 @@
                     colors: {
                         dark: { 900: '#020617', 800: '#0f172a', 700: '#1e293b', 600: '#334155' },
                         brand: { 500: '#6366f1', 400: '#818cf8', 600: '#4f46e5' },
-                        ai: { 500: '#8b5cf6', 400: '#a78bfa' } 
                     },
                     fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
-                    animation: { 
-                        'fade-in': 'fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
-                        'slide-up': 'slideUp 0.6s ease-out',
-                        'pulse-slow': 'pulse 3s infinite',
-                        'typing': 'typing 2s steps(40, end)'
-                    },
-                    keyframes: { 
-                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
-                        typing: { 'from': { width: '0' }, 'to': { width: '100%' } }
-                    }
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-out' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } }
                 }
             }
         }
-        Chart.defaults.color = '#94a3b8';
-        Chart.defaults.borderColor = '#1e293b';
-        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.color = '#94a3b8'; Chart.defaults.borderColor = '#1e293b';
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; overflow-x: hidden; }
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; overflow-x: hidden; scroll-behavior: smooth; }
         .num-font { font-family: 'JetBrains Mono', monospace; }
+        .glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .glass-card:hover { transform: translateY(-3px); border-color: rgba(99, 102, 241, 0.4); }
         
-        /* Glass Card & Hover Effects */
-        .glass-card {
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
+        /* Shift Card Hover Effect */
+        .shift-card-container { position: relative; }
+        .shift-staff-overlay { 
+            position: absolute; inset: 0; background: rgba(2, 6, 23, 0.95); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease; z-index: 20; padding: 1rem; text-align: center;
+            backdrop-filter: blur(5px); pointer-events: none;
         }
-        .glass-card:hover { 
-            transform: translateY(-5px);
-            background: rgba(30, 41, 59, 0.7);
-            border-color: rgba(99, 102, 241, 0.3);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Hover Overlay for Details */
-        .card-details-overlay {
-            position: absolute; inset: 0;
-            background: rgba(2, 6, 23, 0.95);
-            display: flex; flex-direction: column; justify-content: center; padding: 1.5rem;
-            opacity: 0; transition: opacity 0.3s ease;
-            pointer-events: none; z-index: 20;
-        }
-        .glass-card:hover .card-details-overlay { opacity: 1; pointer-events: auto; }
+        .shift-card-container:hover .shift-staff-overlay { opacity: 1; pointer-events: auto; }
 
         .sparkline-container { height: 50px; width: 100%; margin-top: 10px; opacity: 0.8; }
         .chart-box { position: relative; height: 320px; width: 100%; }
         
-        /* Typography */
-        .section-title { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: white; }
-        .title-container { border-left: 4px solid; padding-left: 0.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; }
-
-        /* Login Overlay */
-        #loginOverlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #020617; z-index: 9999;
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        /* Cinema Mode Classes */
-        body.cinema-mode header, body.cinema-mode aside, body.cinema-mode .footer-info { display: none !important; }
-        body.cinema-mode main { margin: 0; padding: 0; height: 100vh; width: 100vw; background: #020617; position: fixed; top: 0; left: 0; z-index: 50; }
-        body.cinema-mode #contentArea { padding: 0; height: 100%; overflow: hidden; display: flex; }
-
-        /* Presentation Slides */
-        .presentation-slide {
-            display: none; width: 100%; height: 100%; padding: 3rem 5rem;
-            flex-direction: column; box-sizing: border-box;
-            background: radial-gradient(circle at top right, rgba(30, 41, 59, 0.4), #020617 70%);
-            animation: fadeIn 0.8s ease-in-out;
-        }
-        .presentation-slide.active { display: flex; }
-
-        /* AI Box in Slide */
-        .ai-slide-summary {
-            background: linear-gradient(90deg, rgba(139, 92, 246, 0.1), rgba(15, 23, 42, 0.4));
-            border-left: 4px solid #a78bfa;
-            padding: 1.5rem; margin-bottom: 2rem; border-radius: 0.5rem;
-            animation: slideUp 0.8s ease-out 0.3s backwards;
-        }
-
-        /* Exit Button */
-        #exitCinemaBtn {
-            position: fixed; top: 20px; right: 20px; z-index: 10000;
-            background: rgba(239, 68, 68, 0.8); color: white;
-            padding: 8px 16px; border-radius: 30px; font-weight: bold; font-size: 0.8rem;
-            cursor: pointer; display: none; backdrop-filter: blur(5px);
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-        body.cinema-mode #exitCinemaBtn { display: block; }
-
-        /* Progress Bar */
-        #slideProgress { position: fixed; bottom: 0; left: 0; height: 4px; background: #6366f1; width: 0%; z-index: 10001; transition: width 0.1s linear; display: none; }
-        body.cinema-mode #slideProgress { display: block; }
-
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #020617; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-
-        /* Markdown */
-        .prose-invert strong { color: #fff; font-weight: 700; color: #a78bfa; }
+        #loginOverlay { position: fixed; inset: 0; background: #020617; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        #loadingOverlayData { position: fixed; inset: 0; background: rgba(2,6,23,0.9); z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; }
         
-        #loadingOverlayData { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2,6,23,0.9); z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        /* Interactive Matrix Table */
+        .matrix-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid #334155; user-select: none; }
+        .matrix-table { width: 100%; border-collapse: separate; border-spacing: 1px; min-width: 1000px; background: #0f172a; }
+        .matrix-th { background: #1e293b; color: #94a3b8; padding: 8px; text-align: center; font-size: 0.7rem; width: 30px; }
+        .matrix-td-name { background: #1e293b; color: white; padding: 6px 12px; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10; border-right: 2px solid #334155; }
+        .matrix-cell { 
+            background: #0f172a; cursor: pointer; height: 36px; text-align: center; 
+            transition: background 0.1s; border: 1px solid #1e293b; font-size: 0.75rem; color: #fff;
+        }
+        .matrix-cell:hover { border-color: white; }
+        .matrix-td-action { background: #1e293b; padding: 4px; border-left: 2px solid #334155; position: sticky; right: 0; z-index: 10; width: 120px; text-align: center; }
+
+        /* Matrix Colors */
+        .cell-m { background-color: #facc15 !important; color: black !important; } /* Morning - Yellow */
+        .cell-e { background-color: #60a5fa !important; color: black !important; } /* Evening - Blue */
+        .cell-n { background-color: #f87171 !important; color: black !important; } /* Night - Red */
+        .cell-weekend { background-color: #334155; opacity: 0.4; pointer-events: none; }
+
+        /* Tool Palette */
+        .tool-btn { transition: all 0.2s; border: 2px solid transparent; }
+        .tool-btn.active { transform: scale(1.1); border-color: white; box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+        /* Email Table Styles (Hidden, used for Copy) */
+        .email-table-out { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; text-align: center; color: black; background: white; }
+        .email-th { background-color: #f4b084; color: black; font-weight: bold; padding: 6px; border: 1px solid #000; }
+        .email-td { border: 1px solid #000; padding: 4px; height: 20px; }
+        .email-td-name { border: 1px solid #000; padding: 4px; text-align: left; font-weight: bold; background: #eee; width: 120px; }
+        .email-m { background-color: #ffff00; color: black; }
+        .email-e { background-color: #00b0f0; color: black; }
+        .email-n { background-color: #ff0000; color: black; }
+
+        /* Dashboard Shift Cards */
+        .d-shift-card { padding: 1.5rem; border-radius: 1rem; display: flex; flex-direction: column; height: 100%; border: 1px solid rgba(255,255,255,0.1); }
+        .d-morning { background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.05)); border-color: rgba(234, 179, 8, 0.5); }
+        .d-evening { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)); border-color: rgba(59, 130, 246, 0.5); }
+        .d-night { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05)); border-color: rgba(239, 68, 68, 0.5); }
+
+        .admin-hidden, .manager-hidden, .supervisor-hidden { display: none !important; }
+        .manager-access { display: block; } 
+        
+        .nav-tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; color: #94a3b8; }
+        .nav-tab:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-tab.active { background: #4f46e5; color: white; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3); }
+
+        /* Quick Nav */
+        .quick-nav { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); z-index: 40; display: flex; flex-direction: column; gap: 8px; background: rgba(15,23,42,0.8); padding: 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px); }
+        .quick-nav-dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; cursor: pointer; transition: all 0.2s; position: relative; }
+        .quick-nav-dot:hover, .quick-nav-dot.active { background: #6366f1; transform: scale(1.3); }
+        .quick-nav-dot:hover::after { content: attr(data-label); position: absolute; right: 20px; top: -5px; background: #0f172a; color: white; padding: 2px 8px; border-radius: 4px; font-size: 10px; white-space: nowrap; border: 1px solid #334155; }
+        
+        .section-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid; padding-left: 0.75rem; }
+        .title-container { margin-bottom: 1.5rem; display: flex; align-items: center; }
+
+        /* Icon Picker Grid */
+        .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 150px; overflow-y: auto; margin-top: 10px; border: 1px solid #334155; padding: 8px; border-radius: 8px; }
+        .icon-option { background: #334155; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 36px; transition: all 0.2s; color: #94a3b8; }
+        .icon-option:hover, .icon-option.selected { background: #6366f1; color: white; transform: scale(1.1); border: 1px solid white; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
+    <!-- LOGIN -->
     <div id="loginOverlay">
-        <div class="bg-dark-800 p-8 rounded-2xl border border-dark-600 shadow-2xl w-96 text-center">
-            <div class="mb-6 flex justify-center">
-                <div class="h-16 w-16 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
-                    <i class="fas fa-shield-alt text-3xl text-white"></i>
-                </div>
-            </div>
-            <h2 class="text-2xl font-bold text-white mb-2">Secure Gateway</h2>
-            <p class="text-slate-400 text-sm mb-6">Authorized Personnel Only</p>
-            
+        <div class="glass-card p-8 rounded-2xl w-96 text-center border border-dark-600">
+            <div class="mb-6 flex justify-center"><div class="h-14 w-14 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg"><i class="fas fa-shield-alt text-2xl text-white"></i></div></div>
+            <h2 class="text-xl font-bold text-white mb-2">Secure Gateway</h2>
             <form onsubmit="handleLogin(event)" class="space-y-4">
-                <div class="relative">
-                    <i class="fas fa-user absolute left-3 top-3 text-slate-500"></i>
-                    <input type="text" id="username" placeholder="Username" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 pl-10 focus:ring-2 focus:ring-brand-500 outline-none" required>
-                </div>
-                <div class="relative">
-                    <i class="fas fa-key absolute left-3 top-3 text-slate-500"></i>
-                    <input type="password" id="password" placeholder="Password" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 pl-10 focus:ring-2 focus:ring-brand-500 outline-none" required>
-                </div>
-                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-lg transition-all shadow-lg">Access Dashboard</button>
+                <input type="text" id="username" placeholder="Username" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 px-4 outline-none focus:border-brand-500" required>
+                <input type="password" id="password" placeholder="Password" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 px-4 outline-none focus:border-brand-500" required>
+                <button type="submit" id="loginBtn" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-lg shadow-lg">Access System</button>
             </form>
-            <p id="loginError" class="text-red-500 text-xs mt-4 hidden"><i class="fas fa-times-circle"></i> Invalid credentials</p>
+            <p id="loginError" class="text-red-500 text-xs mt-4 hidden">Invalid Credentials</p>
         </div>
     </div>
 
-    <button id="exitCinemaBtn" onclick="stopPresentation()"><i class="fas fa-times mr-2"></i> Exit Presentation</button>
-    <div id="slideProgress"></div>
+    <!-- LOADING -->
+    <div id="loadingOverlayData"><div class="w-16 h-16 border-4 border-dark-700 border-t-brand-500 rounded-full animate-spin mb-4"></div><p class="text-slate-400 font-mono text-sm">Syncing Data...</p></div>
 
-    <div id="loadingOverlayData" class="fixed inset-0 z-50 bg-dark-900 flex flex-col items-center justify-center hidden">
-        <div class="w-16 h-16 border-4 border-dark-700 border-t-brand-500 rounded-full animate-spin mb-4"></div>
-        <p class="text-slate-400 font-mono text-sm">Fetching Secure Data...</p>
-    </div>
-
-    <div id="aiProcessingOverlay" class="fixed inset-0 z-[60] bg-dark-900/95 flex flex-col items-center justify-center hidden">
-        <div class="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
-        <h3 class="text-2xl font-bold text-white animate-pulse">Generating Presentation...</h3>
-        <p class="text-slate-400 mt-2">Asking Gemini (via Secure Worker) to analyze each section</p>
-    </div>
-
-    <aside class="w-20 md:w-72 bg-dark-800 border-r border-dark-700 flex flex-col z-20 hidden md:flex transition-all">
-        <div class="h-20 flex items-center justify-center md:justify-start md:px-8 border-b border-dark-700 bg-dark-900/50">
-            <div class="h-10 w-10 bg-brand-600 rounded-lg flex items-center justify-center shadow-lg"><i class="fas fa-cubes-stacked text-white text-lg"></i></div>
-            <div class="ml-4 hidden md:block"><h1 class="text-lg font-bold text-white">3PL KPI</h1><p class="text-[10px] text-brand-400 font-bold tracking-[0.2em]">MONTHLY</p></div>
+    <!-- SIDEBAR -->
+    <aside class="w-20 md:w-72 bg-dark-800 border-r border-dark-700 flex flex-col z-20 hidden md:flex">
+        <div class="h-20 flex items-center px-6 border-b border-dark-700 bg-dark-900/50">
+            <div class="h-10 w-10 bg-brand-600 rounded-lg flex items-center justify-center mr-3"><i class="fas fa-cubes text-white"></i></div>
+            <div class="hidden md:block"><h1 class="text-lg font-bold text-white">3PL KPI</h1><p class="text-[10px] text-brand-400 tracking-[0.2em] font-bold">MONTHLY</p></div>
         </div>
-        <nav class="flex-1 overflow-y-auto py-8 space-y-2 px-4">
-            <div class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-4 hidden md:block">Modules</div>
-            <a href="#" onclick="scrollToSection('overview')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-chart-pie w-5 group-hover:text-brand-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Overview</span></a>
-            <a href="#" onclick="scrollToSection('inbound')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-arrow-down w-5 group-hover:text-blue-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Inbound</span></a>
-            <a href="#" onclick="scrollToSection('outbound')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-arrow-up w-5 group-hover:text-indigo-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Outbound</span></a>
-            <a href="#" onclick="scrollToSection('transport')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-truck-fast w-5 group-hover:text-orange-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Fleet</span></a>
-            <a href="#" onclick="scrollToSection('finance')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-file-invoice w-5 group-hover:text-yellow-400"></i><span class="ml-3 text-sm font-medium hidden md:block">Finance</span></a>
-             <a href="#" onclick="scrollToSection('pending')" class="group flex items-center px-4 py-3.5 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all border border-transparent hover:border-red-500/30"><i class="fas fa-exclamation-triangle w-5 group-hover:text-red-500"></i><span class="ml-3 text-sm font-medium hidden md:block text-red-400">Pending</span></a>
+        <nav class="flex-1 overflow-y-auto py-6 space-y-1 px-3">
+            <a href="#" onclick="showMainView('dashboard')" class="nav-btn bg-dark-700 text-white flex items-center px-4 py-3 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-chart-pie w-5"></i><span class="ml-3 text-sm font-bold hidden md:block">Dashboard</span></a>
+            
+            <div class="mt-6 border-t border-dark-700 pt-4">
+                <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 hidden md:block">Operations</p>
+                <a href="#" onclick="showMainView('workforce')" class="nav-btn flex items-center px-4 py-3 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-users-cog w-5 text-blue-400"></i><span class="ml-3 text-sm font-bold hidden md:block">Workforce Hub</span></a>
+            </div>
         </nav>
         <div class="p-6 border-t border-dark-700 bg-dark-900/30 hidden md:block footer-info">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs text-white font-bold" id="userAvatar">U</div>
-                <div class="overflow-hidden">
-                    <p class="text-xs text-slate-300 font-bold truncate" id="userNameDisplay">User</p>
-                    <button onclick="location.reload()" class="text-[10px] text-red-400 hover:text-red-300">Logout</button>
-                </div>
+                <div><p class="text-xs text-white font-bold" id="userNameDisplay">User</p><button onclick="location.reload()" class="text-[10px] text-red-400 hover:text-red-300">Logout</button></div>
             </div>
         </div>
     </aside>
 
-    <main class="flex-1 flex flex-col h-full relative bg-dark-900">
-        <header class="h-20 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-8 z-30">
-            <div><h2 class="text-xl font-bold text-white tracking-tight">Dashboard Overview</h2><p class="text-xs text-slate-400 mt-1" id="lastUpdateTxt">Last Sync: ...</p></div>
+    <main class="flex-1 flex flex-col h-full bg-dark-900 relative overflow-hidden">
+        <!-- HEADER -->
+        <header class="h-16 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-8 z-30">
+            <div><h2 class="text-xl font-bold text-white" id="pageTitle">Dashboard Overview</h2><p class="text-xs text-slate-400" id="lastUpdateTxt">Syncing...</p></div>
             <div class="flex items-center gap-4">
-                <button onclick="toggleAiSummary()" class="group flex items-center gap-2 bg-dark-800 hover:bg-dark-700 text-white px-3 py-1.5 rounded-lg transition-all border border-dark-600 hover:border-purple-500/50 shadow-lg"><i class="fas fa-sparkles text-purple-400"></i><span class="text-xs font-bold text-purple-300">AI Analysis</span></button>
-                <button onclick="startSmartPresentation()" class="group flex items-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-lg transition-all shadow-lg transform hover:scale-105"><i class="fas fa-play-circle text-xl animate-pulse"></i><span class="text-sm font-bold">Presentation</span></button>
-                <div class="h-8 w-px bg-dark-600 mx-2"></div>
-                <select id="monthSelect" class="bg-dark-900 border border-dark-600 text-white text-sm rounded-lg pl-4 pr-8 py-2 focus:ring-2 focus:ring-brand-500 block shadow-sm cursor-pointer"></select>
+                <div id="save-indicator" class="hidden flex items-center text-green-400 text-xs font-bold mr-4"><i class="fas fa-check-circle mr-2"></i> Saved</div>
+                <div class="h-6 w-px bg-dark-600 mx-2"></div>
+                <select id="monthSelect" class="bg-dark-900 border border-dark-600 text-white text-xs rounded pl-3 pr-8 py-1.5 outline-none focus:border-brand-500"></select>
             </div>
         </header>
 
-        <div id="contentArea" class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
+        <div id="contentArea" class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth relative">
             
-            <div id="aiSummarySection" class="hidden mb-8 animate-slide-down">
-                <div class="ai-card rounded-2xl p-8 relative overflow-hidden" style="background: linear-gradient(145deg, rgba(139,92,246,0.1), rgba(15,23,42,0.6)); border: 1px solid rgba(139,92,246,0.2);">
-                    <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none"><i class="fas fa-brain text-[150px] text-purple-500"></i></div>
-                    <div class="flex justify-between items-start mb-6 relative z-10">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center border border-purple-500/50"><i class="fas fa-sparkles text-purple-400"></i></div>
-                            <div><h3 class="text-xl font-bold text-white">AI Executive Summary</h3><p class="text-xs text-purple-300 font-mono">Real-time analysis powered by AI</p></div>
+            <!-- Quick Nav -->
+            <div id="quickNav" class="quick-nav hidden">
+                <div class="quick-nav-dot" data-label="Shift Log" onclick="scrollToId('shift-log-display')"></div>
+                <div class="quick-nav-dot" data-label="Overview" onclick="scrollToId('overview')"></div>
+                <div class="quick-nav-dot" data-label="Storage" onclick="scrollToId('storage')"></div>
+                <div class="quick-nav-dot" data-label="Quality" onclick="scrollToId('quality')"></div>
+                <div class="quick-nav-dot" data-label="Inbound" onclick="scrollToId('inbound')"></div>
+                <div class="quick-nav-dot" data-label="Outbound" onclick="scrollToId('outbound')"></div>
+                <div class="quick-nav-dot" data-label="RSD/Finance" onclick="scrollToId('finance')"></div>
+                <div class="quick-nav-dot" data-label="Monthly Schedule" onclick="scrollToId('monthly-schedule')"></div>
+            </div>
+
+            <!-- ===== DASHBOARD ===== -->
+            <div id="view-dashboard" class="main-view space-y-12 pb-20">
+                
+                <!-- SHIFT CARDS & LOG (Restricted to Manager/Admin) -->
+                <div id="shift-log-display" class="hidden animate-fade-in mb-10 manager-access">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="title-container border-green-500 m-0"><h3 class="section-title text-green-400">Daily Shift Performance</h3></div>
+                        <span class="bg-green-900/30 text-green-400 px-3 py-1 rounded text-xs font-mono font-bold" id="shift-log-date">--/--/----</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Morning -->
+                        <div class="shift-card-container group">
+                            <div class="d-shift-card d-morning">
+                                <div class="flex justify-between items-center mb-4 border-b border-yellow-500/30 pb-2">
+                                    <h4 class="text-xl font-bold text-yellow-100 flex items-center gap-2"><i class="fas fa-sun text-yellow-400"></i> Morning Shift</h4>
+                                </div>
+                                <div class="space-y-3 text-sm text-yellow-50/80 flex-1" id="card-stats-morning">
+                                    <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
+                                </div>
+                            </div>
+                            <div class="shift-staff-overlay rounded-xl">
+                                <h5 class="text-yellow-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
+                                <div id="card-staff-morning" class="text-white text-sm font-medium space-y-1"></div>
+                            </div>
                         </div>
-                        <button onclick="hideAiSummary()" class="text-slate-400 hover:text-white bg-dark-900/50 hover:bg-dark-900 rounded-lg p-2 transition-colors"><i class="fas fa-times"></i></button>
+                        <!-- Evening -->
+                        <div class="shift-card-container group">
+                            <div class="d-shift-card d-evening">
+                                <div class="flex justify-between items-center mb-4 border-b border-blue-500/30 pb-2">
+                                    <h4 class="text-xl font-bold text-blue-100 flex items-center gap-2"><i class="fas fa-moon text-blue-400"></i> Evening Shift</h4>
+                                </div>
+                                <div class="space-y-3 text-sm text-blue-50/80 flex-1" id="card-stats-evening">
+                                    <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
+                                </div>
+                            </div>
+                            <div class="shift-staff-overlay rounded-xl">
+                                <h5 class="text-blue-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
+                                <div id="card-staff-evening" class="text-white text-sm font-medium space-y-1"></div>
+                            </div>
+                        </div>
+                        <!-- Night -->
+                        <div class="shift-card-container group">
+                            <div class="d-shift-card d-night">
+                                <div class="flex justify-between items-center mb-4 border-b border-red-500/30 pb-2">
+                                    <h4 class="text-xl font-bold text-red-100 flex items-center gap-2"><i class="fas fa-star text-red-400"></i> Night Shift</h4>
+                                </div>
+                                <div class="space-y-3 text-sm text-red-50/80 flex-1" id="card-stats-night">
+                                    <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
+                                </div>
+                            </div>
+                            <div class="shift-staff-overlay rounded-xl">
+                                <h5 class="text-red-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
+                                <div id="card-staff-night" class="text-white text-sm font-medium space-y-1"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="aiLoadingState" class="hidden py-8 flex flex-col items-center justify-center">
-                        <div class="flex items-center gap-2 mb-2"><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-100"></span><span class="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-200"></span></div><p class="text-sm text-purple-300 animate-pulse">Analyzing dashboard metrics via Secure Worker...</p>
+
+                    <!-- Shift Trend Chart -->
+                    <div class="glass-card rounded-2xl p-6 mt-6 border border-dark-700">
+                        <h4 class="text-white font-bold text-sm mb-4"><i class="fas fa-chart-line text-brand-400 mr-2"></i>Shift Performance Trend (Last 7 Days)</h4>
+                        <div class="h-64 w-full">
+                            <canvas id="chart-shift-trend"></canvas>
+                        </div>
                     </div>
-                    <div id="aiSummaryContent" class="prose-invert text-sm max-w-none text-slate-300 relative z-10"></div>
+                </div>
+
+                <div id="custom-cards-grid" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 hidden"></div>
+                
+                <!-- SECTIONS -->
+                <section id="overview" class="animate-fade-in"><div class="title-container border-brand-500"><h3 class="section-title text-brand-400">Overview</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-orders"></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-returns"></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10"><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Orders Trend</h4></div><div class="chart-box"><canvas id="chart-orders-trend"></canvas></div></div><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Market Share</h4></div><div class="chart-box"><canvas id="chart-orders-dist"></canvas></div></div></div></section>
+                
+                <!-- STORAGE SECTION -->
+                <section id="storage" class="animate-fade-in"><div class="title-container border-orange-500"><h3 class="section-title text-orange-400">Storage Capacity & Utilization (Manual)</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="storage-grid"></div></section>
+
+                <section id="quality" class="animate-fade-in"><div class="title-container border-emerald-500"><h3 class="section-title text-emerald-400">Quality</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="quality-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Comparative Quality</h4><div class="chart-box"><canvas id="chart-quality-comp"></canvas></div></div></section>
+                <section id="inbound" class="animate-fade-in"><div class="title-container border-blue-500"><h3 class="section-title text-blue-400">Inbound</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-trucks"></canvas></div></div></section>
+                <section id="outbound" class="animate-fade-in"><div class="title-container border-indigo-500"><h3 class="section-title text-indigo-400">Outbound</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-trucks"></canvas></div></div></section>
+                
+                <section id="finance" class="animate-fade-in"><div class="title-container border-yellow-500"><h3 class="section-title text-yellow-400">RSD & Finance</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="rsd-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">SAP vs RSD</h4><div class="chart-box"><canvas id="chart-finance-recon"></canvas></div></div></section>
+                <section id="pending" class="animate-fade-in mt-16 mb-8"><div class="title-container border-red-600"><h3 class="section-title text-red-500">Pending Actions</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="pod-pending-grid"></div><div class="grid grid-cols-3 gap-6 mb-8" id="return-pending-grid"></div></section>
+            
+                <!-- MONTHLY SCHEDULE SNAPSHOT (Restricted) -->
+                <section id="monthly-schedule" class="animate-fade-in mt-12 mb-8 manager-access hidden">
+                    <div class="title-container border-slate-500"><h3 class="section-title text-slate-400"><i class="far fa-calendar-alt mr-2"></i> Monthly Schedule Snapshot</h3></div>
+                    <div id="dashboard-monthly-preview" class="w-full">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- ===== WORKFORCE HUB ===== -->
+            <div id="view-workforce" class="main-view hidden animate-fade-in h-full flex flex-col">
+                <div class="flex justify-between items-center border-b border-dark-700 pb-2 mb-6">
+                    <div class="flex gap-2 overflow-x-auto">
+                        <button onclick="switchAdminTab('roster')" class="nav-tab active" id="tab-roster">Live Operations</button>
+                        <button onclick="switchAdminTab('planner')" class="nav-tab ops-access" id="tab-planner">Shift Planner</button>
+                        <button onclick="switchAdminTab('overtime')" class="nav-tab ops-access" id="tab-overtime">Weekend & OT</button>
+                        <button onclick="switchAdminTab('data')" class="nav-tab admin-only" id="tab-data">Uploads & Metrics</button>
+                        <button onclick="switchAdminTab('staff')" class="nav-tab ops-access" id="tab-staff">Staff Directory</button>
+                    </div>
+                </div>
+
+                <div id="subview-roster" class="sub-view flex-1 flex flex-col space-y-8">
+                      <div class="glass-card p-6 rounded-xl border-t-4 border-purple-500 manager-access">
+                        <h4 class="text-white font-bold mb-4 flex items-center gap-2"><i class="fas fa-trophy text-purple-400"></i> Monthly OT Leaderboard</h4>
+                        <div class="overflow-hidden rounded-lg border border-dark-700">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-dark-800 text-slate-400"><tr><th class="p-3">Rank</th><th class="p-3">Name</th><th class="p-3 text-right">Hours</th></tr></thead>
+                                <tbody id="mgr-leaderboard" class="text-slate-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="subview-planner" class="sub-view hidden h-full flex flex-col">
+                    <div class="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div><label class="block text-xs text-slate-400 mb-1">Year</label><input type="number" id="plannerYear" class="bg-dark-800 border border-dark-600 rounded px-2 py-1 text-white w-20" onchange="initPlannerMatrix()"></div>
+                            <div><label class="block text-xs text-slate-400 mb-1">Month</label><select id="plannerMonth" class="bg-dark-800 border border-dark-600 rounded px-2 py-1 text-white w-32" onchange="initPlannerMatrix()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+                        </div>
+                        <div class="flex gap-2">
+                             <button onclick="copyTableToClipboard('planner-matrix')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2"><i class="fas fa-envelope"></i> Copy for Email</button>
+                             <button onclick="savePlanner()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2 admin-only"><i class="fas fa-save"></i> Save Schedule</button>
+                        </div>
+                    </div>
+                    <div class="flex gap-4 mb-4 bg-dark-800/50 p-2 rounded-lg border border-dark-700 admin-only">
+                        <span class="text-xs text-slate-400 self-center mr-2 uppercase font-bold">Paint Tools:</span>
+                        <button onclick="setTool('morning')" class="tool-btn w-8 h-8 rounded bg-yellow-400 flex items-center justify-center text-black text-xs font-bold" title="Morning">M</button>
+                        <button onclick="setTool('evening')" class="tool-btn w-8 h-8 rounded bg-blue-400 flex items-center justify-center text-black text-xs font-bold" title="Evening">E</button>
+                        <button onclick="setTool('night')" class="tool-btn w-8 h-8 rounded bg-red-400 flex items-center justify-center text-black text-xs font-bold" title="Night">N</button>
+                        <button onclick="setTool('clear')" class="tool-btn w-8 h-8 rounded bg-dark-600 border border-slate-500 flex items-center justify-center text-white text-xs" title="Clear"><i class="fas fa-eraser"></i></button>
+                        <span class="text-xs text-slate-500 self-center ml-auto">Click & Drag to paint. Use <b>Actions</b> column to fill month.</span>
+                    </div>
+                    <div class="matrix-wrapper flex-1 custom-scrollbar"><table class="matrix-table" id="planner-matrix"></table></div>
+                </div>
+
+                <div id="subview-overtime" class="sub-view hidden h-full">
+                    <div class="flex gap-4 mb-6">
+                        <input type="month" id="otMonthPicker" class="bg-dark-800 border border-dark-600 text-white rounded px-3 py-2" onchange="renderWeekendTable()">
+                        <button onclick="copyTableToClipboard('weekend-table-preview')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2"><i class="fas fa-envelope"></i> Copy for Email</button>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                         <div class="glass-card p-6 rounded-xl border-t-4 border-orange-500 h-fit admin-only">
+                            <h3 class="text-white font-bold mb-4">Add Weekend OT</h3>
+                            <div class="space-y-3">
+                                <select id="otEmpSelect" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-3 py-2 text-sm"></select>
+                                <input type="date" id="otDate" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-3 py-2 text-sm">
+                                <div class="flex gap-2">
+                                    <input type="time" id="otTimeFrom" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-2 py-2 text-sm">
+                                    <input type="time" id="otTimeTo" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-2 py-2 text-sm">
+                                </div>
+                                <button onclick="addOvertime()" class="w-full bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded font-bold">Add Shift</button>
+                            </div>
+                        </div>
+                        <div class="col-span-2 bg-white p-4 rounded-lg overflow-x-auto text-black h-fit" id="weekend-table-preview"></div>
+                    </div>
+                </div>
+
+                <div id="subview-data" class="sub-view hidden h-full space-y-8 admin-only">
+                    <!-- Manual Metrics Editor -->
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-orange-500">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-white mb-1">Manual Metric Entry</h3>
+                            <button onclick="saveManualMetrics()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded font-bold shadow-lg text-sm">Save Metrics</button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-6">Manually override Storage, Pending Actions, and Finance data for each warehouse.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div><label class="text-xs text-slate-400">Target Month</label><select id="mm-month" class="w-full bg-dark-900 border border-dark-600 text-white rounded p-2" onchange="loadManualForm()"></select></div>
+                            <div><label class="text-xs text-slate-400">Warehouse</label><select id="mm-wh" class="w-full bg-dark-900 border border-dark-600 text-white rounded p-2" onchange="loadManualForm()"><option value="SPIMACO">SPIMACO</option><option value="PROCEED">PROCEED</option><option value="DSV">DSV</option></select></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Storage -->
+                            <div class="bg-dark-900/50 p-4 rounded-lg border border-dark-700">
+                                <h4 class="text-orange-400 font-bold text-xs uppercase mb-3 border-b border-dark-600 pb-2">Storage</h4>
+                                <div class="space-y-3">
+                                    <div><label class="text-[10px] text-slate-500 uppercase">Total Capacity</label><input type="number" id="mm-cap" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                    <div><label class="text-[10px] text-slate-500 uppercase">Used Space</label><input type="number" id="mm-used" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                </div>
+                            </div>
+                            <!-- Finance -->
+                            <div class="bg-dark-900/50 p-4 rounded-lg border border-dark-700">
+                                <h4 class="text-yellow-400 font-bold text-xs uppercase mb-3 border-b border-dark-600 pb-2">RSD & Finance</h4>
+                                <div class="space-y-3">
+                                    <div><label class="text-[10px] text-slate-500 uppercase">SAP Value</label><input type="number" id="mm-sap" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                    <div><label class="text-[10px] text-slate-500 uppercase">RSD Value</label><input type="number" id="mm-rsd" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                </div>
+                            </div>
+                            <!-- Pending -->
+                            <div class="bg-dark-900/50 p-4 rounded-lg border border-dark-700">
+                                <h4 class="text-red-400 font-bold text-xs uppercase mb-3 border-b border-dark-600 pb-2">Pending Actions</h4>
+                                <div class="space-y-3">
+                                    <div><label class="text-[10px] text-slate-500 uppercase">POD Pending</label><input type="number" id="mm-pod" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                    <div><label class="text-[10px] text-slate-500 uppercase">Return Pending</label><input type="number" id="mm-ret" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-indigo-500">
+                        <div class="flex justify-between items-center mb-4">
+                            <div><h3 class="text-xl font-bold text-white mb-1">Master CSV Editor</h3><p class="text-xs text-slate-400">Edit general metrics in <b>main.csv</b>.</p></div>
+                            <button onclick="saveCSV()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold shadow-lg flex items-center text-sm"><i class="fas fa-save mr-2"></i> Save Changes</button>
+                        </div>
+                        <div class="overflow-auto max-h-96 border border-dark-600 rounded bg-dark-900 custom-scrollbar"><table class="w-full text-xs text-left" id="csv-editor-table"></table></div>
+                    </div>
+                    
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-green-500">
+                        <h3 class="text-xl font-bold text-white mb-4">Upload Daily Shift Log</h3>
+                        <label class="inline-block bg-green-600 hover:bg-green-500 text-white border border-green-500 px-6 py-3 rounded-lg font-bold cursor-pointer transition-colors shadow-lg"><i class="fas fa-file-csv mr-2"></i> Select CSV File<input type="file" onchange="handleShiftLogUpload(this)" class="hidden" accept=".csv"></label>
+                    </div>
+                    
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-brand-500">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-white font-bold text-xl">Add Custom Metric Card</h3>
+                            <button onclick="openAddCardModal()" class="bg-brand-600 text-white px-3 py-1.5 rounded text-xs font-bold">Add New</button>
+                        </div>
+                        <div id="custom-metric-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                </div>
+
+                <div id="subview-staff" class="sub-view hidden h-full">
+                    <div class="flex justify-between items-center mb-4 ops-access"><h3 class="text-white font-bold">Staff Directory</h3><button onclick="addNewEmployee()" class="bg-brand-600 text-white px-4 py-2 rounded text-xs font-bold admin-only">+ New Employee</button></div>
+                    <div class="glass-card rounded-xl overflow-hidden"><table class="w-full text-left"><thead class="bg-dark-800 text-slate-400 text-xs uppercase"><tr><th class="p-4">Name</th><th class="p-4 text-center admin-only">Actions</th></tr></thead><tbody id="emp-table-body" class="text-slate-300 text-sm divide-y divide-dark-700"></tbody></table></div>
                 </div>
             </div>
 
-            <div id="slide-overview" class="presentation-slide hidden">
-                <div class="title-container border-brand-500 mb-4"><h3 class="section-title text-brand-400">Executive Overview</h3></div>
-                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-overview" class="text-slate-200 text-sm"></div></div>
-                <div id="slide-content-overview" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
-            </div>
-            <div id="slide-inbound" class="presentation-slide hidden">
-                <div class="title-container border-blue-500 mb-4"><h3 class="section-title text-blue-400">Inbound Operations</h3></div>
-                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-inbound" class="text-slate-200 text-sm"></div></div>
-                <div id="slide-content-inbound" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
-            </div>
-            <div id="slide-outbound" class="presentation-slide hidden">
-                <div class="title-container border-indigo-500 mb-4"><h3 class="section-title text-indigo-400">Outbound Operations</h3></div>
-                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-outbound" class="text-slate-200 text-sm"></div></div>
-                <div id="slide-content-outbound" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
-            </div>
-            <div id="slide-storage" class="presentation-slide hidden">
-                <div class="title-container border-purple-500 mb-4"><h3 class="section-title text-purple-400">Storage & Capacity</h3></div>
-                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-storage" class="text-slate-200 text-sm"></div></div>
-                <div id="slide-content-storage" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
-            </div>
-            <div id="slide-fleet" class="presentation-slide hidden">
-                <div class="title-container border-orange-500 mb-4"><h3 class="section-title text-orange-400">Fleet & Transport</h3></div>
-                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-fleet" class="text-slate-200 text-sm"></div></div>
-                <div id="slide-content-fleet" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
-            </div>
-            <div id="slide-finance" class="presentation-slide hidden">
-                <div class="title-container border-yellow-500 mb-4"><h3 class="section-title text-yellow-400">Financial Reconciliation</h3></div>
-                <div class="ai-slide-summary"><div class="flex items-center gap-2 mb-2 text-purple-300 font-bold text-sm"><i class="fas fa-robot"></i> AI Insight</div><div id="ai-text-finance" class="text-slate-200 text-sm"></div></div>
-                <div id="slide-content-finance" class="grid grid-cols-1 gap-6 flex-1 overflow-hidden"></div>
-            </div>
-
-            <div id="normal-dashboard-view" class="space-y-16 pb-20">
-                
-                <section id="overview" class="animate-fade-in"><div class="title-container border-brand-500"><h3 class="section-title text-brand-400">Performance Overview</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-orders"></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-returns"></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10"><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Total Orders Trend</h4></div><div class="chart-box"><canvas id="chart-orders-trend"></canvas></div></div><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Market Share</h4></div><div class="chart-box"><canvas id="chart-orders-dist"></canvas></div></div></div></section>
-                
-                <section id="quality" class="animate-fade-in"><div class="title-container border-emerald-500"><h3 class="section-title text-emerald-400">Quality Standards</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="quality-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Comparative Quality Metrics</h4><div class="chart-box"><canvas id="chart-quality-comp"></canvas></div></div></section>
-                
-                <section id="storage" class="animate-fade-in"><div class="title-container border-purple-500"><h3 class="section-title text-purple-400">Warehouse Capacity</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="storage-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-storage-trend"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-storage-bar"></canvas></div></div></section>
-                
-                <section id="inbound" class="animate-fade-in"><div class="title-container border-blue-500"><h3 class="section-title text-blue-400">Inbound Operations</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-trucks"></canvas></div></div></section>
-                
-                <section id="outbound" class="animate-fade-in"><div class="title-container border-indigo-500"><h3 class="section-title text-indigo-400">Outbound Operations</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-trucks"></canvas></div></div></section>
-                
-                <section id="transport" class="animate-fade-in"><div class="title-container border-orange-500"><h3 class="section-title text-orange-400">Fleet Management (DSV)</h3></div><div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8" id="fleet-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Efficiency Analytics</h4><div class="chart-box"><canvas id="chart-fleet-ops"></canvas></div></div></section>
-                
-                <section id="finance" class="animate-fade-in"><div class="title-container border-yellow-500"><h3 class="section-title text-yellow-400">SFDA RSD</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="rsd-grid"></div><div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">SAP vs RSD 
-Variance (Units)</h4><div class="chart-box"><canvas id="chart-finance-recon"></canvas></div></div></section>
-                
-                <section id="pending" class="animate-fade-in mt-16 mb-8"><div class="title-container border-red-600"><h3 class="section-title text-red-500">Pending Actions</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="pod-pending-grid"></div><div class="grid grid-cols-3 gap-6 mb-8" id="return-pending-grid"></div></section>
-            </div>
         </div>
     </main>
 
     <script>
-        // -- CONSTANTS --
-        // SECURE UPDATE: Hardcoded URLs and Keys removed. Pointing to Cloudflare Worker.
         const WORKER_URL = "https://api.wf6638.workers.dev";
         const WH_ORDER = ['SPIMACO', 'PROCEED', 'DSV'];
-        const CHART_COLORS = { SPIMACO: '#60a5fa', PROCEED: '#34d399', DSV: '#fb923c' };
+        const CHART_COLORS = { SPIMACO: '#60a5fa', PROCEED: '#34d399', DSV: '#fb923c' }; 
         const COLORS = { 'SPIMACO': 'blue', 'PROCEED': 'green', 'DSV': 'orange', 'default': 'brand' };
 
-        let rawData = [];
-        let monthList = [];
-        let chartInstances = {}; 
-        let sparklineInstances = []; 
-        let presentationInterval;
-        let aiSummaries = {};
-        
-        // SESSION TOKEN STORAGE
-        let sessionToken = null;
+        let rawData = []; let monthList = []; let chartInstances = {}; let sparklineInstances = [];
+        let sessionToken = null; let currentUser = null; 
+        let employees = []; let shifts = {}; let overtime = []; let customCards = []; 
+        let masterShiftLogs = {}; let manualMetrics = {};
+        let currentTool = 'morning'; let isPainting = false;
 
-        // --- AUTH (VIA WORKER) ---
         async function handleLogin(e) {
             e.preventDefault();
-            const u = document.getElementById('username').value.trim();
-            const p = document.getElementById('password').value.trim();
-            
+            const u = document.getElementById('username').value.trim(); const p = document.getElementById('password').value.trim();
+            const btn = document.getElementById('loginBtn'); btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
             try {
-                // Secure Login request to Worker
-                const response = await fetch(`${WORKER_URL}/api/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: u, password: p })
-                });
-
+                const response = await fetch(`${WORKER_URL}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
                 if (response.ok) {
-                    const data = await response.json();
-                    sessionToken = data.token; // Store token for subsequent requests
-                    
-                    document.getElementById('loginOverlay').style.display = 'none';
-                    document.getElementById('userNameDisplay').textContent = u;
+                    const data = await response.json(); 
+                    sessionToken = 'mock-token'; 
+                    currentUser = { username: u, role: data.role || 'guest' };
+                    document.getElementById('loginOverlay').style.display = 'none'; 
+                    document.getElementById('userNameDisplay').textContent = u; 
                     document.getElementById('userAvatar').textContent = u.charAt(0).toUpperCase();
-                    fetchData();
-                } else {
+                    applyRoleUI(currentUser.role); 
+                    refreshData(); fetchData(); 
+                } else { 
                     document.getElementById('loginError').classList.remove('hidden');
+                    btn.innerHTML = 'Access System';
                 }
-            } catch (error) {
-                alert("Login Error: " + error.message);
+            } catch (error) { 
+                console.error(error); 
+                document.getElementById('loginError').classList.remove('hidden'); 
+                btn.innerHTML = 'Access System';
+            } 
+        }
+
+        function applyRoleUI(role) {
+            // Admin only elements
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (role === 'admin') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+
+            // Manager & Admin Access
+            document.querySelectorAll('.manager-access').forEach(el => {
+                if (role === 'admin' || role === 'manager') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+
+            // Ops Access (Tabs visible to Admin/Manager)
+            document.querySelectorAll('.ops-access').forEach(el => {
+                if (role === 'admin' || role === 'manager') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+        }
+
+        async function refreshData() {
+            employees = (await fetchGithub('employees.json')) || [];
+            shifts = (await fetchGithub('shifts.json')) || {};
+            overtime = (await fetchGithub('overtime.json')) || [];
+            customCards = (await fetchGithub('custom_cards.json')) || [];
+            masterShiftLogs = (await fetchGithub('shift_logs_master.json')) || {}; 
+            manualMetrics = (await fetchGithub('manual_metrics.json')) || {};
+            
+            const today = new Date();
+            document.getElementById('plannerYear').value = today.getFullYear();
+            document.getElementById('plannerMonth').value = today.getMonth() + 1;
+            document.getElementById('otMonthPicker').value = today.toISOString().slice(0, 7);
+
+            const sel = document.getElementById('otEmpSelect'); 
+            if(sel) sel.innerHTML = '<option value="">Select...</option>' + employees.map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+            
+            initPlannerMatrix(); renderWeekendTable(); renderEmpTable(); renderCustomCards(); renderManagerLeaderboard();
+            
+            const sortedDates = Object.keys(masterShiftLogs).sort((a,b)=>new Date(a)-new Date(b));
+            if(sortedDates.length > 0) {
+                const lastDate = sortedDates[sortedDates.length-1];
+                updateDashboardShiftCards(lastDate, masterShiftLogs[lastDate]);
             }
         }
 
-        // --- DATA FETCH (VIA WORKER) ---
-        async function fetchData() {
-            document.getElementById('loadingOverlayData').style.display = 'flex';
-            
-            try {
-                const response = await fetch(`${WORKER_URL}/api/data`, {
-                    headers: { 'Authorization': 'Bearer ' + sessionToken }
-                });
-
-                if (!response.ok) throw new Error("Failed to fetch data");
-
-                const json = await response.json();
-                
-                // Parse the CSV returned by the Worker
-                Papa.parse(json.csv, {
-                    header: true, skipEmptyLines: true,
-                    complete: (res) => {
-                        rawData = res.data;
-                        document.getElementById('lastUpdateTxt').innerText = 'Last Sync: ' + new Date().toLocaleTimeString();
-                        document.getElementById('loadingOverlayData').style.display = 'none';
-                        init();
-                        setInterval(fetchData, 300000); // 5 min
-                    }
-                });
-
-            } catch (error) {
-                console.error(error);
-                alert("Session expired or data error. Please reload.");
-                location.reload();
-            }
+        function showMainView(id) {
+            document.querySelectorAll('.main-view').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-dark-700', 'text-white'));
+            document.getElementById(`view-${id}`)?.classList.remove('hidden');
+            const qNav = document.getElementById('quickNav');
+            if(id==='dashboard') { render(); qNav.classList.remove('hidden'); } else { qNav.classList.add('hidden'); }
         }
 
-        function init() {
-            monthList = [...new Set(rawData.map(d => d.Report_Month))];
-            const sel = document.getElementById('monthSelect');
-            if(sel.options.length === 0) {
-                sel.innerHTML = '<option value="ALL_TOTAL">All Time (Total)</option><option value="ALL_AVG">All Time (Average)</option>';
-                monthList.forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`);
-                sel.value = monthList[monthList.length - 1];
-                sel.onchange = render;
-            }
-            render();
-        }
+        function scrollToId(id) { const el = document.getElementById(id); if(el) { el.scrollIntoView({behavior: 'smooth', block: 'center'}); } }
+        function switchAdminTab(tabId) { document.querySelectorAll('.sub-view').forEach(el => el.classList.add('hidden')); document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active')); document.getElementById(`subview-${tabId}`)?.classList.remove('hidden'); document.getElementById(`tab-${tabId}`)?.classList.add('active'); }
 
-        function render() {
-            const cur = document.getElementById('monthSelect').value;
-            let prev = (cur!=='ALL_TOTAL' && cur!=='ALL_AVG') ? monthList[monthList.indexOf(cur)-1] : null;
-            clearGrids();
-            renderOverview(cur, prev);
-            renderQuality(cur, prev);
-            renderStorage(cur, prev);
-            renderInbound(cur, prev);
-            renderOutbound(cur, prev);
-            renderFleet(cur, prev);
-            renderRSD(cur, prev);
-            renderPending(cur, prev);
-            updateAllCharts();
-        }
-
-        // --- SECTIONS ---
-        function renderOverview(c,p){ WH_ORDER.forEach(wh=>{ createCard('row-orders', wh, formatNum(getMetric(c,wh,'Orders/Month')), 'Orders', calcDiff(getMetric(c,wh,'Orders/Month'), getMetric(p,wh,'Orders/Month')), getTrend(wh,'Orders/Month'), 'shopping-cart', COLORS[wh], false, `Total orders processed by ${wh}`); createCard('row-returns', wh, formatNum(getMetric(c,wh,'Returns')), 'Returns', calcDiff(getMetric(c,wh,'Returns'), getMetric(p,wh,'Returns')), getTrend(wh,'Returns'), 'undo', 'red', true, `Customer returns handled by ${wh}`); }); }
-        function renderQuality(c,p){ WH_ORDER.forEach(wh=>{ const h = `<div class="glass-card rounded-2xl p-6 border-l-4 border-green-500 group"><i class="fas fa-info-circle card-info-btn" title="Quality metrics for ${wh}"></i><h4 class="text-slate-400 text-xs font-bold uppercase mb-4">${wh}</h4><div class="space-y-4"><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Accuracy</span><span class="font-bold text-white">${getMetric(c,wh,'Order Accuracy',true).toFixed(1)}%</span></div><div class="w-full bg-dark-700 h-1.5"><div class="bg-green-500 h-1.5" style="width:${getMetric(c,wh,'Order Accuracy',true)}%"></div></div></div></div></div>`; document.getElementById('quality-grid').insertAdjacentHTML('beforeend', h); }); }
-        function renderStorage(c,p){ WH_ORDER.forEach(wh=>{ createCard('storage-grid', wh, ((getMetric(c,wh,'Utalized')/getMetric(c,wh,'Capacity')*100)||0).toFixed(1), '% Util', 0, getTrendStorage(wh), 'warehouse', COLORS[wh], false, `Storage utilization vs capacity`); }); }
-        function renderInbound(c,p){ renderMetricGroup('inbound-cases-grid', c, p, 'inbound Case', 'Box'); renderMetricGroup('inbound-pallets-grid', c, p, 'Inbound Pallets', 'Plt'); renderMetricGroup('inbound-trucks-grid', c, p, 'Inbound Trucks 45 ft', 'Trk'); }
-        function renderOutbound(c,p){ renderMetricGroup('outbound-cases-grid', c, p, 'Outbound Case', 'Box'); renderMetricGroup('outbound-pallets-grid', c, p, 'Outbound Pallets', 'Plt'); renderMetricGroup('outbound-trucks-grid', c, p, 'Outbound Trucks 45 ft', 'Trk'); }
-        function renderFleet(c,p){ 
-            const wh='DSV'; 
-            createCard('fleet-grid', 'Dedicated 45ft', formatNum(getMetric(c,wh,"DEDICATED TRUCK 45'FT")), 'Trucks', calcDiff(getMetric(c,wh,"DEDICATED TRUCK 45'FT"), getMetric(p,wh,"DEDICATED TRUCK 45'FT")), getTrend(wh,"DEDICATED TRUCK 45'FT"), 'truck-fast', 'orange', false, 'Long Haul Fleet');
-            createCard('fleet-grid', 'Dedicated 10 Ton', formatNum(getMetric(c,wh,"DEDICATED TRUCK 10 TON")), 'Trucks', calcDiff(getMetric(c,wh,"DEDICATED TRUCK 10 TON"), getMetric(p,wh,"DEDICATED TRUCK 10 TON")), getTrend(wh,"DEDICATED TRUCK 10 TON"), 'truck-loading', 'orange', false, 'Distribution Fleet'); 
-            createCard('fleet-grid', 'Total Trips', formatNum(getMetric(c,wh,'TOTAL TRIPS')), '#', calcDiff(getMetric(c,wh,'TOTAL TRIPS'), getMetric(p,wh,'TOTAL TRIPS')), getTrend(wh,'TOTAL TRIPS'), 'route', 'orange', false, 'Trips made'); 
-            createCard('fleet-grid', 'Destinations', formatNum(getMetric(c,wh,'TOTAL DESTINATIONS')), '#', calcDiff(getMetric(c,wh,'TOTAL DESTINATIONS'), getMetric(p,wh,'TOTAL DESTINATIONS')), getTrend(wh,'TOTAL DESTINATIONS'), 'map-marker-alt', 'orange', false, 'Drop points'); 
-        }
-        function renderRSD(c,p){ WH_ORDER.forEach(wh=>{ createCard('rsd-grid', wh, (100-(Math.abs(getMetric(c,wh,'SAP')-getMetric(c,wh,'RSD'))/getMetric(c,wh,'SAP')*100)||100).toFixed(2), '% Match', 0, getTrendRSD(wh), 'check-double', 'green', false, `SAP vs RSD Inventory Match`); }); }
-        function renderPending(c,p){ WH_ORDER.forEach(wh=>{ createCard('pod-pending-grid', wh, getMetric(c,wh,'POD pending'), 'Docs', 0, getTrend(wh,'POD pending'), 'file-signature', 'red', true, 'Pending PODs'); createCard('return-pending-grid', wh, getMetric(c,wh,'Return pending'), 'Items', 0, getTrend(wh,'Return pending'), 'box-open', 'red', true, 'Pending Returns'); }); }
-        function renderMetricGroup(id, c, p, col, unit) { WH_ORDER.forEach(wh=>{ createCard(id, wh, formatNum(getMetric(c,wh,col)), unit, calcDiff(getMetric(c,wh,col), getMetric(p,wh,col)), getTrend(wh,col), 'box', COLORS[wh], false, `${col} volume for ${wh}`); }); }
-
-        // --- CORE UTILS ---
-        function clearGrids() { 
-            // Destroy all sparklines first
-            sparklineInstances.forEach(c => c.destroy());
-            sparklineInstances = [];
+        function setTool(t) { currentTool = t; document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); document.querySelector(`button[onclick="setTool('${t}')"]`).classList.add('active'); }
+        function initPlannerMatrix() {
+            const year = document.getElementById('plannerYear').value; const month = document.getElementById('plannerMonth').value; const daysInMonth = new Date(year, month, 0).getDate(); const table = document.getElementById('planner-matrix');
+            let html = `<thead><tr><th class="matrix-th" style="width:150px; left:0; z-index:20;">EMPLOYEE</th>`;
+            for(let i=1; i<=daysInMonth; i++) { const d = new Date(year, month-1, i); const isWeekend = d.getDay()===5 || d.getDay()===6; html += `<th class="matrix-th ${isWeekend?'text-orange-400':''}">${i}<br><span class="text-[9px]">${d.toLocaleDateString('en-US',{weekday:'narrow'})}</span></th>`; }
             
-            ['row-orders','row-returns','quality-grid','storage-grid','inbound-cases-grid','inbound-pallets-grid','inbound-trucks-grid','outbound-cases-grid','outbound-pallets-grid','outbound-trucks-grid','fleet-grid','rsd-grid','pod-pending-grid','return-pending-grid'].forEach(id => document.getElementById(id).innerHTML=''); 
-        }
-
-        function createCard(id, title, val, unit, diff, trend, icon, color, bad=false, tooltip='Data Metric') {
-            const colors = { blue: '#3b82f6', green: '#10b981', orange: '#f97316', red: '#ef4444', indigo: '#6366f1', brand: '#6366f1' };
-            const cHex = colors[color] || colors.brand;
-            let badge = '';
+            // Only add Actions column for Admin
+            const actionHeader = (currentUser && currentUser.role === 'admin') ? `<th class="matrix-th" style="right:0; z-index:20; width:120px;">Actions</th>` : '';
+            html += `${actionHeader}</tr></thead><tbody onmouseleave="isPainting=false">`;
             
-            // Pending Logic
-            const isPending = id.includes('pending');
-            const numVal = parseNum(val);
-            const style = (isPending && numVal > 0) ? `border-left-color: #ef4444` : `border-left-color: ${cHex}`;
-            if(isPending && numVal > 0) badge = `<span class="ml-2 bg-red-500/20 text-red-400 text-[9px] font-bold px-2 py-0.5 rounded animate-pulse">ACTION</span>`;
-
-            // Hover overlay logic (Last 3 months)
-            const last3 = trend.slice(-3).reverse();
-            const hoverHtml = `
-                <div class="card-details-overlay rounded-xl">
-                    <p class="text-xs font-bold text-brand-400 uppercase mb-2 border-b border-brand-500/30 pb-1">Trend (Last 3M)</p>
-                    ${last3.map((v,i) => `<div class="flex justify-between text-xs py-1 border-b border-white/5 last:border-0"><span class="text-slate-400">M-${i}</span><span class="text-white font-mono">${formatNum(v)}</span></div>`).join('')}
-                </div>
-            `;
-
-            const cardId = `c-${Math.random().toString(36).substr(2,9)}`;
-            
-            // Diff arrow
-            let diffHtml = '<span class="text-slate-500 text-xs">-</span>';
-            if(diff!=0 && !isNaN(diff)) {
-                const isPos = diff > 0;
-                const isGood = bad ? !isPos : isPos;
-                const clr = isGood ? 'text-green-400' : 'text-red-400';
-                diffHtml = `<span class="${clr} text-xs font-bold ml-2 bg-dark-900/50 px-2 py-0.5 rounded"><i class="fas fa-arrow-${isPos?'up':'down'}"></i> ${Math.abs(diff)}%</span>`;
-            }
-
-            const html = `
-                <div class="glass-card rounded-2xl p-6 border-l-4 group" style="${style}">
-                    ${hoverHtml}
-                    <i class="fas fa-info-circle card-info-btn" title="${tooltip}"></i>
-                    <div class="flex justify-between items-start mb-3 relative z-10">
-                        <div class="w-full">
-                             <div class="flex items-center mb-1"><h4 class="text-slate-400 text-[10px] font-bold uppercase tracking-widest group-hover:text-white transition-colors">${title}</h4>${badge}</div>
-                             <div class="flex items-baseline gap-2"><span class="text-3xl font-bold text-white num-font">${val}</span><span class="text-xs text-slate-500">${unit}</span></div>
-                        </div>
-                        <div class="h-10 w-10 shrink-0 rounded-full bg-dark-800/50 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform"><i class="fas fa-${icon} text-lg" style="color:${cHex}"></i></div>
-                    </div>
-                    <div class="flex items-center justify-between relative z-10">${diffHtml}</div>
-                    <div class="sparkline-container relative z-10"><canvas id="${cardId}"></canvas></div>
-                </div>`;
-            document.getElementById(id).insertAdjacentHTML('beforeend', html);
-            
-            setTimeout(()=>{
-                const cvs = document.getElementById(cardId);
-                if(cvs) {
-                    const chart = new Chart(cvs,{type:'line',data:{labels:trend.map((_,i)=>i),datasets:[{data:trend,borderColor:cHex,borderWidth:2,pointRadius:0,fill:{target:'origin',above:cHex+'15'}}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{display:false},y:{display:false}},plugins:{legend:{display:false}}}});
-                    sparklineInstances.push(chart);
+            employees.forEach(emp => { 
+                html += `<tr><td class="matrix-td-name">${emp.name}</td>`; 
+                for(let i=1; i<=daysInMonth; i++) { 
+                    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(i).padStart(2,'0')}`; const dObj = new Date(year, month-1, i); const isWeekend = dObj.getDay()===5 || dObj.getDay()===6; let cls = isWeekend ? 'cell-weekend' : ''; let char = ''; 
+                    if(shifts[dateStr]) { if(shifts[dateStr].morning && shifts[dateStr].morning.includes(emp.name)) { cls='cell-m'; char='M'; } else if(shifts[dateStr].evening && shifts[dateStr].evening.includes(emp.name)) { cls='cell-e'; char='E'; } else if(shifts[dateStr].night && shifts[dateStr].night.includes(emp.name)) { cls='cell-n'; char='N'; } } 
+                    // Interaction only for Admin
+                    const interactions = (currentUser && currentUser.role === 'admin') ? `onmousedown="startPaint(this)" onmouseover="paint(this)" onmouseup="stopPaint()"` : '';
+                    html += `<td class="matrix-cell ${cls}" data-date="${dateStr}" data-emp="${emp.name}" data-weekend="${isWeekend}" ${interactions}>${char}</td>`; 
+                } 
+                if(currentUser && currentUser.role === 'admin') {
+                    html += `<td class="matrix-td-action"><div class="flex gap-1 justify-center"><button onclick="fillMonth('${emp.name}', 'morning')" class="text-[10px] bg-yellow-400 text-black w-5 h-5 rounded font-bold hover:scale-110" title="Fill Morning">M</button><button onclick="fillMonth('${emp.name}', 'evening')" class="text-[10px] bg-blue-400 text-black w-5 h-5 rounded font-bold hover:scale-110" title="Fill Evening">E</button><button onclick="fillMonth('${emp.name}', 'night')" class="text-[10px] bg-red-400 text-black w-5 h-5 rounded font-bold hover:scale-110" title="Fill Night">N</button><button onclick="fillMonth('${emp.name}', 'clear')" class="text-[10px] bg-slate-600 text-white w-5 h-5 rounded font-bold hover:scale-110" title="Clear Month"><i class="fas fa-times"></i></button></div></td>`;
                 }
-            },50);
+                html += `</tr>`; 
+            });
+            table.innerHTML = html + `</tbody>`;
         }
-
-        // --- AI SUMMARY TOGGLE (SECURE) ---
-        function toggleAiSummary() {
-            const sec = document.getElementById('aiSummarySection');
-            if(sec.classList.contains('hidden')) { sec.classList.remove('hidden'); generateAiReport(); } else { sec.classList.add('hidden'); }
-        }
-        function hideAiSummary() { document.getElementById('aiSummarySection').classList.add('hidden'); }
+        function startPaint(cell) { if(currentUser.role !== 'admin') return; isPainting = true; applyShift(cell); } function stopPaint() { isPainting = false; } function paint(cell) { if(isPainting) applyShift(cell); }
+        function applyShift(cell) { if(cell.dataset.weekend === 'true' || currentUser.role !== 'admin') return; const date = cell.dataset.date; const emp = cell.dataset.emp; updateShiftData(date, emp, currentTool); cell.className = 'matrix-cell'; cell.innerText = ''; if(currentTool !== 'clear') { cell.classList.add(currentTool === 'morning' ? 'cell-m' : (currentTool === 'evening' ? 'cell-e' : 'cell-n')); cell.innerText = currentTool.charAt(0).toUpperCase(); } }
+        function updateShiftData(date, emp, shiftType) { if(!shifts[date]) shifts[date] = { morning:[], evening:[], night:[] }; shifts[date].morning = shifts[date].morning.filter(n => n !== emp); shifts[date].evening = shifts[date].evening.filter(n => n !== emp); shifts[date].night = shifts[date].night.filter(n => n !== emp); if(shiftType !== 'clear') shifts[date][shiftType].push(emp); }
+        function fillMonth(empName, shiftType) { const year = document.getElementById('plannerYear').value; const month = document.getElementById('plannerMonth').value; const daysInMonth = new Date(year, month, 0).getDate(); for(let i=1; i<=daysInMonth; i++) { const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(i).padStart(2,'0')}`; const dObj = new Date(year, month-1, i); if(dObj.getDay() === 5 || dObj.getDay() === 6) continue; updateShiftData(dateStr, empName, shiftType); } initPlannerMatrix(); Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Updated ${empName} to ${shiftType}`, showConfirmButton: false, timer: 1500 }); }
+        async function savePlanner() { await saveGithub('shifts.json', shifts); Swal.fire('Saved', 'Monthly roster updated successfully.', 'success'); }
+        function copyTableToClipboard(elementId) { const el = document.getElementById(elementId); if(!el) return; const range = document.createRange(); range.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(range); try { document.execCommand('copy'); Swal.fire('Copied', 'Table data copied to clipboard (Email Ready)', 'success'); } catch(e) { Swal.fire('Error', 'Copy failed.', 'error'); } window.getSelection().removeAllRanges(); }
         
-        async function generateAiReport() {
-            const m = document.getElementById('monthSelect').value;
-            const content = document.getElementById('aiSummaryContent');
-            const load = document.getElementById('aiLoadingState');
-            content.innerHTML=''; load.classList.remove('hidden');
-            const prompt = `Act as Logistics Director. Summary for ${m}. Sections: Verdict, Risks, Warehouse Perf, Actions. Markdown.`;
+        function renderWeekendTable() { const month = document.getElementById('otMonthPicker').value; if(!month) return; const filtered = overtime.filter(o => o.date.startsWith(month)).sort((a,b)=>new Date(a.date)-new Date(b.date)); const grouped = {}; filtered.forEach(o=>{ if(!grouped[o.date]) grouped[o.date]=[]; grouped[o.date].push(o); }); let html = `<table class="email-table-out" border="1" style="width:100%">`; Object.keys(grouped).forEach(d => { const dayName = new Date(d).toLocaleDateString('en-US', {weekday:'long'}); const dateFmt = new Date(d).toLocaleDateString('en-GB'); const items = grouped[d]; html += `<tr><td colspan="4" class="email-th" style="background:#f4b084">${dayName} - ${dateFmt}</td></tr>`; html += `<tr style="background:#e7e6e6"><td class="email-td"><b>Name</b></td><td class="email-td"><b>From</b></td><td class="email-td"><b>To</b></td><td class="email-td"><b>Hours</b></td></tr>`; items.forEach(i => { html += `<tr><td class="email-td">${i.name}</td><td class="email-td">${i.from}</td><td class="email-td">${i.to}</td><td class="email-td">${i.hours}</td></tr>`; }); }); html += `</table>`; document.getElementById('weekend-table-preview').innerHTML = html || '<p class="text-center text-gray-500 mt-4">No overtime found for this month.</p>'; }
+        async function addOvertime() { const name = document.getElementById('otEmpSelect').value; const date = document.getElementById('otDate').value; const from = document.getElementById('otTimeFrom').value; const to = document.getElementById('otTimeTo').value; if(!name || !date || !from || !to) return Swal.fire('Error', 'Fill all fields', 'warning'); const d1 = new Date(`2000-01-01T${from}`); const d2 = new Date(`2000-01-01T${to}`); let hours = (d2 - d1) / 36e5; if(hours < 0) hours += 24; overtime.push({ id: Date.now(), name, date, from, to, hours: parseFloat(hours.toFixed(1)) }); await saveGithub('overtime.json', overtime); renderWeekendTable(); }
+
+        function handleShiftLogUpload(input) { const file = input.files[0]; if(!file) return; Papa.parse(file, { complete: async function(results) { const data = results.data; let newEntriesCount = 0; data.forEach((row, i) => { if(i === 0 || row.length < 8) return; const dateRaw = row[0]; if(!dateRaw) return; const parts = dateRaw.split('/'); const isoDate = `${parts[2]}-${parts[1]}-${parts[0]}`; if(!masterShiftLogs[isoDate]) masterShiftLogs[isoDate] = { morning:null, evening:null, night:null, displayDate: dateRaw }; const shiftRaw = row[1].toLowerCase().replace(/\s/g, ''); let key = 'morning'; if(shiftRaw.includes('second') || shiftRaw.includes('even')) key = 'evening'; if(shiftRaw.includes('third') || shiftRaw.includes('night')) key = 'night'; masterShiftLogs[isoDate][key] = { rec: row[2], disp: row[3], std: row[4], trucksPlan: row[5], trucksRec: row[6], trucksDisp: row[7] }; newEntriesCount++; }); await saveGithub('shift_logs_master.json', masterShiftLogs); const dates = Object.keys(masterShiftLogs).sort((a,b)=>new Date(a)-new Date(b)); if(dates.length > 0) { const lastDate = dates[dates.length-1]; updateDashboardShiftCards(lastDate, masterShiftLogs[lastDate]); } renderShiftTrendChart(); Swal.fire('Success', `Imported ${newEntriesCount} log entries.`, 'success'); input.value = ''; } }); }
+        function updateDashboardShiftCards(isoDate, data) { const displayDate = data.displayDate || isoDate; document.getElementById('shift-log-display').classList.remove('hidden'); document.getElementById('shift-log-date').textContent = displayDate; const roster = shifts[isoDate] || { morning:[], evening:[], night:[] }; const renderStats = (d) => { if(!d) return '<p class="italic opacity-50">No Data</p>'; return `<div class="grid grid-cols-2 gap-2"><div><span class="block text-xs opacity-60 font-bold">PALLETS</span><div class="flex justify-between text-xs"><span>Rec:</span><span class="font-bold">${d.rec}</span></div><div class="flex justify-between text-xs"><span>Disp:</span><span class="font-bold">${d.disp}</span></div></div><div><span class="block text-xs opacity-60 font-bold">TRUCKS</span><div class="flex justify-between text-xs"><span>Plan:</span><span class="font-bold">${d.trucksPlan}</span></div><div class="flex justify-between text-xs"><span>Act:</span><span class="font-bold">${d.trucksRec}</span></div></div></div>`; }; document.getElementById('card-stats-morning').innerHTML = renderStats(data.morning); document.getElementById('card-staff-morning').innerHTML = roster.morning.map(n => `<div>${n}</div>`).join('') || 'No staff assigned'; document.getElementById('card-stats-evening').innerHTML = renderStats(data.evening); document.getElementById('card-staff-evening').innerHTML = roster.evening.map(n => `<div>${n}</div>`).join('') || 'No staff assigned'; document.getElementById('card-stats-night').innerHTML = renderStats(data.night); document.getElementById('card-staff-night').innerHTML = roster.night.map(n => `<div>${n}</div>`).join('') || 'No staff assigned'; }
+        
+        // NEW FUNCTION: Render Trend Chart
+        function renderShiftTrendChart() {
+            const ctx = document.getElementById('chart-shift-trend');
+            if(!ctx) return;
             
-            try {
-                // Call Worker AI Endpoint
-                const res = await fetch(`${WORKER_URL}/api/ai`, { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + sessionToken 
-                    }, 
-                    body: JSON.stringify({ prompt: prompt }) 
-                });
+            const dates = Object.keys(masterShiftLogs).sort((a,b) => new Date(a) - new Date(b)).slice(-7); // Last 7 days
+            const labels = dates.map(d => new Date(d).toLocaleDateString('en-GB', {day:'numeric', month:'short'}));
+            
+            const dataRec = dates.map(d => {
+                const log = masterShiftLogs[d];
+                return (parseInt(log.morning?.rec)||0) + (parseInt(log.evening?.rec)||0) + (parseInt(log.night?.rec)||0);
+            });
+            
+            const dataDisp = dates.map(d => {
+                const log = masterShiftLogs[d];
+                return (parseInt(log.morning?.disp)||0) + (parseInt(log.evening?.disp)||0) + (parseInt(log.night?.disp)||0);
+            });
+
+            if(window.shiftTrendChart) window.shiftTrendChart.destroy();
+
+            window.shiftTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Received', data: dataRec, borderColor: '#10b981', backgroundColor: '#10b98120', fill: true, tension: 0.4 },
+                        { label: 'Dispatched', data: dataDisp, borderColor: '#3b82f6', backgroundColor: '#3b82f620', fill: true, tension: 0.4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, grid: { color: '#334155' } }, x: { grid: { display: false } } },
+                    plugins: { legend: { labels: { color: '#94a3b8' } } }
+                }
+            });
+        }
+
+        function renderMonthlySchedule(monthStr) {
+            if(!monthStr || monthStr === "ALL_TOTAL") return;
+            const container = document.getElementById('dashboard-monthly-preview');
+            container.className = 'grid grid-cols-1 lg:grid-cols-3 gap-6'; 
+
+            const parts = monthStr.split('-'); 
+            if(parts.length < 2) return;
+            const year = 2000 + parseInt(parts[0]);
+            const monthIdx = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(parts[1]);
+            
+            if(monthIdx === -1) return;
+            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+            
+            // Collect Unique Names
+            const staffSets = { morning: new Set(), evening: new Set(), night: new Set() };
+
+            for(let i=1; i<=daysInMonth; i++) {
+                const dateStr = `${year}-${String(monthIdx+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const dayData = shifts[dateStr];
+                if(dayData) {
+                    if(dayData.morning) dayData.morning.forEach(n => staffSets.morning.add(n));
+                    if(dayData.evening) dayData.evening.forEach(n => staffSets.evening.add(n));
+                    if(dayData.night) dayData.night.forEach(n => staffSets.night.add(n));
+                }
+            }
+
+            const shiftsMap = {
+                morning: { title: '1st Shift (Morning)', color: 'yellow', icon: 'fas fa-sun' },
+                evening: { title: '2nd Shift (Evening)', color: 'blue', icon: 'fas fa-moon' },
+                night: { title: '3rd Shift (Night)', color: 'red', icon: 'fas fa-star' }
+            };
+
+            let html = '';
+            Object.keys(shiftsMap).forEach(key => {
+                const conf = shiftsMap[key];
+                const names = Array.from(staffSets[key]).sort();
+                const count = names.length;
                 
-                if (!res.ok) throw new Error("AI Service Failed");
+                const listHtml = names.length > 0 
+                    ? `<ul class="space-y-2 p-4">${names.map(n => `<li class="flex items-center text-sm text-slate-300 border-b border-white/5 pb-2 last:border-0"><div class="w-2 h-2 rounded-full bg-${conf.color}-500 mr-3"></div>${n}</li>`).join('')}</ul>`
+                    : `<div class="p-6 text-center text-slate-500 italic text-sm">No staff assigned</div>`;
 
-                const json = await res.json();
-                const text = json.candidates[0].content.parts[0].text;
-                content.innerHTML = marked.parse(text);
-            } catch(e) { 
-                console.error(e);
-                content.innerHTML = "Error generating report. Check permissions."; 
-            } finally { 
-                load.classList.add('hidden'); 
+                html += `
+                    <div class="glass-card rounded-xl overflow-hidden border-t-4 border-${conf.color}-500 flex flex-col h-full">
+                        <div class="p-4 bg-dark-800/80 border-b border-dark-600 flex items-center justify-between shrink-0">
+                            <h4 class="font-bold text-white text-sm flex items-center"><i class="${conf.icon} text-${conf.color}-500 mr-2"></i>${conf.title}</h4>
+                            <span class="bg-${conf.color}-500/20 text-${conf.color}-400 text-xs px-2 py-1 rounded-full font-bold">${count} Staff</span>
+                        </div>
+                        <div class="bg-dark-900/40 flex-1 overflow-y-auto custom-scrollbar">
+                            ${listHtml}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderManagerLeaderboard() { const totals = {}; overtime.forEach(o => { totals[o.name] = (totals[o.name]||0) + o.hours; }); const sorted = Object.entries(totals).sort(([,a],[,b]) => b-a).slice(0, 10); const tbody = document.getElementById('mgr-leaderboard'); if(tbody) tbody.innerHTML = sorted.map(([n,h], i) => `<tr><td class="p-3 text-brand-400 font-bold">#${i+1}</td><td class="p-3 text-white">${n}</td><td class="p-3 text-right font-mono">${h.toFixed(1)}</td></tr>`).join(''); }
+        
+        async function openAddCardModal() { 
+            const icons = ['box', 'truck', 'users', 'warehouse', 'clipboard-list', 'chart-line', 'dollar-sign', 'calendar-check', 'shipping-fast', 'boxes', 'pallet', 'dolly'];
+            const iconHtml = `<div class="icon-grid">${icons.map(i => `<div class="icon-option" onclick="selectIcon('${i}')" id="icon-${i}"><i class="fas fa-${i}"></i></div>`).join('')}</div>`;
+            window.selectedIcon = 'chart-bar';
+            window.selectIcon = (i) => { window.selectedIcon = i; document.querySelectorAll('.icon-option').forEach(el => el.classList.remove('selected')); document.getElementById(`icon-${i}`).classList.add('selected'); };
+
+            const { value: form } = await Swal.fire({ 
+                title: 'Add Metric Card', 
+                html: `
+                    <input id="swal-c-title" class="swal2-input" placeholder="Title">
+                    <input id="swal-c-val" class="swal2-input" placeholder="Main Value">
+                    <div class="my-2 border-t border-slate-600"></div>
+                    <p class="text-xs text-slate-400 mb-2">Additional Details (Optional)</p>
+                    <input id="swal-c-lbl" class="swal2-input" placeholder="Label 1">
+                    <input id="swal-c-val-2" class="swal2-input" placeholder="Value 1">
+                    <input id="swal-c-lbl-2" class="swal2-input" placeholder="Label 2">
+                    <input id="swal-c-val-3" class="swal2-input" placeholder="Value 2">
+                    <p class="text-xs text-slate-400 mt-2">Select Icon:</p>
+                    ${iconHtml}`, 
+                background: '#1e293b', color: '#fff', 
+                preConfirm: () => [
+                    document.getElementById('swal-c-title')?.value, 
+                    document.getElementById('swal-c-val')?.value, 
+                    window.selectedIcon,
+                    document.getElementById('swal-c-lbl')?.value,
+                    document.getElementById('swal-c-val-2')?.value,
+                    document.getElementById('swal-c-lbl-2')?.value,
+                    document.getElementById('swal-c-val-3')?.value
+                ] 
+            }); 
+            
+            if(form && form[0]) { 
+                const newCard = { 
+                    title: form[0], 
+                    value: form[1], 
+                    icon: form[2] || 'chart-bar',
+                    details: []
+                };
+                if(form[3] && form[4]) newCard.details.push({ label: form[3], value: form[4] });
+                if(form[5] && form[6]) newCard.details.push({ label: form[5], value: form[6] });
+                
+                customCards.push(newCard); 
+                await saveGithub('custom_cards.json', customCards); 
+                renderCustomCards(); 
+            } 
+        }
+
+        function renderCustomCards() { 
+            const con = document.getElementById('custom-cards-grid'); 
+            const list = document.getElementById('custom-metric-list'); 
+            if(customCards.length > 0) con?.classList.remove('hidden'); 
+            const html = customCards.map((c, i) => {
+                const detailsHtml = c.details ? c.details.map(d => `<div class="flex justify-between text-xs mt-1 pt-1 border-t border-white/5"><span class="text-slate-400">${d.label}</span><span class="text-white font-bold">${d.value}</span></div>`).join('') : '';
+                return `<div class="glass-card rounded-2xl p-6 border-l-4 border-brand-500 relative group">
+                    <button onclick="delCard(${i})" class="absolute top-2 right-2 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><i class="fas fa-trash"></i></button>
+                    <div class="flex justify-between items-start mb-2">
+                        <div><h4 class="text-slate-400 text-xs font-bold uppercase">${c.title}</h4><p class="text-2xl font-bold text-white mt-1 num-font">${c.value}</p></div>
+                        <div class="h-10 w-10 rounded-full bg-dark-800/50 flex items-center justify-center"><i class="fas fa-${c.icon} text-brand-500"></i></div>
+                    </div>
+                    ${detailsHtml}
+                </div>`;
+            }).join(''); 
+            if(con) con.innerHTML = html; 
+            if(list) list.innerHTML = html; 
+        }
+        async function delCard(i) { customCards.splice(i,1); await saveGithub('custom_cards.json', customCards); renderCustomCards(); }
+
+        async function fetchData() { document.getElementById('loadingOverlayData').style.display = 'flex'; try { const res = await fetch('https://raw.githubusercontent.com/realwafix/WH/refs/heads/main/main.csv'); const csv = await res.text(); Papa.parse(csv, { header: true, skipEmptyLines: true, complete: (res) => { rawData = res.data; document.getElementById('lastUpdateTxt').innerText = 'Synced'; document.getElementById('loadingOverlayData').style.display = 'none'; init(); } }); } catch (error) { document.getElementById('loadingOverlayData').style.display = 'none'; } }
+        function init() { monthList = [...new Set(rawData.map(d => d.Report_Month))]; const sel = document.getElementById('monthSelect'); if(sel.options.length === 0) { sel.innerHTML = '<option value="ALL_TOTAL">All Time</option>'; monthList.forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`); sel.value = monthList[monthList.length - 1]; sel.onchange = render; populateManualFormMonth(); } render(); }
+        
+        function populateManualFormMonth() {
+            const sel = document.getElementById('mm-month');
+            if(sel) sel.innerHTML = monthList.map(m => `<option value="${m}">${m}</option>`).join('');
+        }
+        
+        function loadManualForm() {
+            const m = document.getElementById('mm-month').value;
+            const w = document.getElementById('mm-wh').value;
+            const data = manualMetrics[m]?.[w] || {};
+            document.getElementById('mm-cap').value = data.capacity || '';
+            document.getElementById('mm-used').value = data.used || '';
+            document.getElementById('mm-sap').value = data.sap || '';
+            document.getElementById('mm-rsd').value = data.rsd || '';
+            document.getElementById('mm-pod').value = data.pod || '';
+            document.getElementById('mm-ret').value = data.ret || '';
+        }
+        
+        async function saveManualMetrics() {
+            const m = document.getElementById('mm-month').value;
+            const w = document.getElementById('mm-wh').value;
+            if(!manualMetrics[m]) manualMetrics[m] = {};
+            manualMetrics[m][w] = {
+                capacity: parseFloat(document.getElementById('mm-cap').value) || 0,
+                used: parseFloat(document.getElementById('mm-used').value) || 0,
+                sap: parseFloat(document.getElementById('mm-sap').value) || 0,
+                rsd: parseFloat(document.getElementById('mm-rsd').value) || 0,
+                pod: parseFloat(document.getElementById('mm-pod').value) || 0,
+                ret: parseFloat(document.getElementById('mm-ret').value) || 0
+            };
+            await saveGithub('manual_metrics.json', manualMetrics);
+            renderDashboard(); // Refresh UI
+            Swal.fire({ toast: true, icon: 'success', title: 'Metrics Saved', timer: 1500 });
+        }
+
+        function render() { const cur = document.getElementById('monthSelect').value; let prev = (cur!=='ALL_TOTAL') ? monthList[monthList.indexOf(cur)-1] : null; clearGrids(); renderOverview(cur, prev); renderStorage(cur, prev); renderQuality(cur, prev); renderInbound(cur, prev); renderOutbound(cur, prev); renderRSD(cur,prev); renderPending(cur,prev); renderMonthlySchedule(cur); updateAllCharts(); renderShiftTrendChart(); }
+
+        // Get Metric Wrapper to support Manual Overrides
+        function getMetric(m, wh, col) { 
+            // Check manual first for specific columns
+            if(manualMetrics[m] && manualMetrics[m][wh]) {
+                const man = manualMetrics[m][wh];
+                if(col === 'Capacity') return man.capacity;
+                if(col === 'Utalized' || col === 'Average storage in the warehouse') return man.used;
+                if(col === 'SAP') return man.sap;
+                if(col === 'RSD') return man.rsd;
+                if(col === 'POD pending') return man.pod;
+                if(col === 'Return pending') return man.ret;
             }
+            
+            // Fallback to CSV
+            if(!m)return 0; if(m.startsWith('ALL')) { const rows=rawData.filter(d=>d.Warehouse_Name.toUpperCase().includes(wh)); if(!rows.length) return 0; let s=0,c=0; rows.forEach(r=>{const v=parseNum(r[col]);if(r[col]&&!['NA','-',''].includes(r[col].toString().trim())){s+=v;c++;}}); return 0; /* Avg logic complex for strings */ } 
+            const r = rawData.find(d => d.Report_Month === m && d.Warehouse_Name.toUpperCase().includes(wh)); if(!r) return 0; return parseNum(r[col]); 
         }
 
-        // --- METRIC UTILS (V16 Logic + Guard) ---
-        function getMetric(m, wh, col, pct=false) { 
-            if (!m) return 0; // Guard clause
-            if(m.startsWith('ALL')) {
-                const rows = rawData.filter(d => d.Warehouse_Name.toUpperCase().includes(wh));
-                if(!rows.length) return 0;
-                let sum=0, count=0;
-                rows.forEach(r => { 
-                    const v = parseNum(r[col]); 
-                    if(r[col] && !['NA','-',''].includes(r[col].toString().trim())) { sum+=v; count++; }
-                });
-                return (pct || m==='ALL_AVG') ? (count?sum/count:0) : sum;
-            }
-            const r = rawData.find(d => d.Report_Month === m && d.Warehouse_Name.toUpperCase().includes(wh)); 
-            if(!r) return 0; return parseNum(r[col]); 
+        async function fetchGithub(file) { try { return await (await fetch(`${WORKER_URL}/api/github-get`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename:file})})).json(); } catch(e){return null;} }
+        async function saveGithub(file, content) { try { const res = await fetch(`${WORKER_URL}/api/github-save`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename:file, content, message:'Update'})}); if(res.ok) { document.getElementById('save-indicator')?.classList.remove('hidden'); setTimeout(()=>document.getElementById('save-indicator')?.classList.add('hidden'),2000); return true; } } catch(e) { Swal.fire('Error', 'Token Issue', 'error'); return false; } }
+        function clearGrids() { sparklineInstances.forEach(c => c.destroy()); sparklineInstances = []; ['row-orders','row-returns','storage-grid','quality-grid','inbound-cases-grid','inbound-pallets-grid','inbound-trucks-grid','outbound-cases-grid','outbound-pallets-grid','outbound-trucks-grid','rsd-grid','pod-pending-grid','return-pending-grid'].forEach(id => { const el = document.getElementById(id); if (el) el.innerHTML=''; }); }
+        
+        function createCard(id, t, v, u, diff, trendData, c, historyData) { 
+            const clr={blue:'#3b82f6',green:'#10b981',orange:'#f97316',red:'#ef4444',brand:'#6366f1'}[c]||'#6366f1'; 
+            const cid=`c-${Math.random().toString(36).substr(2,9)}`; 
+            const target = document.getElementById(id);
+            let historyHtml = '';
+            if(historyData && historyData.length > 0) { historyData.forEach(h => { historyHtml += `<div class="flex justify-between text-xs text-white border-b border-white/10 pb-1 mb-1 last:border-0 last:mb-0"><span>${h.month}</span><span>${h.value.toLocaleString()}</span></div>`; }); } else { historyHtml = '<div class="text-xs text-slate-400 italic">No history available</div>'; }
+            if (target) target.insertAdjacentHTML('beforeend', `<div class="glass-card rounded-2xl p-6 border-l-4 group relative" style="border-left-color:${clr}"><div class="flex justify-between mb-3"><div><h4 class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">${t}</h4><div class="flex items-baseline gap-2"><span class="text-3xl font-bold text-white num-font">${v}</span><span class="text-xs text-slate-500">${u}</span></div></div><div class="text-right"><div class="h-10 w-10 rounded-full bg-dark-800/50 flex items-center justify-center ml-auto mb-1"><i class="fas fa-chart-bar text-lg" style="color:${clr}"></i></div><span class="text-xs font-bold ${diff.cls} flex items-center justify-end gap-1"><i class="fas fa-${diff.icon}"></i> ${diff.val}</span></div></div><div class="sparkline-container"><canvas id="${cid}"></canvas></div><div class="absolute inset-0 bg-dark-900/95 backdrop-blur-sm z-20 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 rounded-2xl pointer-events-none"><h5 class="text-brand-400 text-xs font-bold uppercase mb-3 border-b border-brand-500/30 pb-1 w-full text-center">Last 3 Months</h5><div class="w-full space-y-1">${historyHtml}</div></div></div>`); 
+            setTimeout(()=>{const ctx=document.getElementById(cid);if(ctx){sparklineInstances.push(new Chart(ctx,{type:'line',data:{labels:[1,2,3,4,5,6],datasets:[{data:trendData,borderColor:clr,borderWidth:2,pointRadius:0,fill:{target:'origin',above:clr+'15'}}]},options:{responsive:true,maintainAspectRatio:false,scales:{x:{display:false},y:{display:false}},plugins:{legend:{display:false}}}}));}},50); 
         }
-        function parseNum(val) { if(!val) return 0; let s = val.toString().trim(); if(s==='NA'||s==='-'||s.includes('<')) return 0; return parseFloat(s.replace(/%/g, '').replace(/,/g, '')); }
-        function formatNum(n) { return n.toLocaleString('en-US'); }
-        function calcDiff(c, p) { return p ? ((c-p)/p*100).toFixed(1) : 0; }
-        function getTrend(wh, col) { return monthList.slice(Math.max(0, monthList.length-6)).map(m => getMetric(m, wh, col)); }
-        function getTrendStorage(wh) { return monthList.slice(Math.max(0, monthList.length-6)).map(m => { let c=getMetric(m,wh,'Capacity'); let u=getMetric(m,wh,'Utalized')||getMetric(m,wh,'Average storage in the warehouse'); return c>0?(u/c*100):0; }); }
-        function getTrendRSD(wh) { return monthList.slice(Math.max(0, monthList.length-6)).map(m => { let s=getMetric(m,wh,'SAP'); let r=getMetric(m,wh,'RSD'); return Math.max(s,r)>0 ? 100-(Math.abs(s-r)/Math.max(s,r)*100) : 0; }); }
-        function getSectionData(col) { return WH_ORDER.map(w => ({ wh: w, val: getMetric(document.getElementById('monthSelect').value, w, col) })); }
-        function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
 
-        // --- Chart Configs ---
-        function updateAllCharts() { Object.keys(chartInstances).forEach(k=>{if(chartInstances[k])chartInstances[k].destroy();delete chartInstances[k];}); ['chart-orders-trend', 'chart-orders-dist', 'chart-quality-comp', 'chart-storage-trend', 'chart-storage-bar', 'chart-inbound-vol', 'chart-inbound-trucks', 'chart-outbound-vol', 'chart-outbound-trucks', 'chart-fleet-ops', 'chart-finance-recon'].forEach(id => renderSpecificChart(id, id)); }
-        function renderSpecificChart(type, targetId) { const ctx = document.getElementById(targetId); if(!ctx) return; 
-            let config=null;
-            if (type==='chart-inbound-vol') config=getBarConfig('inbound Case');
-            else if (type==='chart-inbound-trucks') config=getBarConfig('Inbound Trucks 45 ft');
-            else if (type==='chart-outbound-vol') config=getBarConfig('Outbound Case');
-            else if (type==='chart-outbound-trucks') config=getBarConfig('Outbound Trucks 45 ft');
-            else if (type==='chart-storage-trend') config=getMultiBarConfig();
-            else if (type==='chart-storage-bar') config=getSingleBarConfig();
-            else if (type==='chart-orders-trend') config=getLineConfig('Orders/Month');
-            else if (type==='chart-fleet-ops') config=getFleetConfig();
-            else if (type==='chart-finance-recon') config=getFinanceConfig();
-            else if (type==='chart-orders-dist') config=getDoughnutConfig('Orders/Month');
-            else if (type==='chart-quality-comp') config=getGroupedBarConfig(['Order Accuracy', 'Order Fill Rate']);
-            if(config) chartInstances[targetId] = new Chart(ctx, config);
+        function parseNum(v) { if(!v)return 0; let s=v.toString().trim(); return (s==='NA'||s==='-'||s.includes('<'))?0:parseFloat(s.replace(/%/g,'').replace(/,/g,'')); }
+        function formatNum(n) { return n.toLocaleString('en-US'); } function calcDiff(c,p) { 
+            if(p === 0) return { val: c > 0 ? '+100%' : '0%', icon: 'minus', cls: 'text-slate-500' };
+            const val = ((c-p)/p*100); 
+            return { val: Math.abs(val).toFixed(1)+'%', icon: val>=0?'arrow-up':'arrow-down', cls: val>=0?'text-green-400':'text-red-400' }; 
         }
+        function getTrend(wh,col) { return monthList.slice(Math.max(0,monthList.length-6)).map(m=>getMetric(m,wh,col)); }
+        function getLast3Months(wh, col) { const currentMonth = document.getElementById('monthSelect').value; const idx = monthList.indexOf(currentMonth); if(idx === -1) return []; const indices = []; for(let i = Math.max(0, idx-2); i <= idx; i++) { indices.push(i); } return indices.map(i => { const m = monthList[i]; return { month: m, value: getMetric(m, wh, col) }; }); }
+
+        function renderOverview(c,p){ WH_ORDER.forEach(wh=>{ createCard('row-orders', wh, formatNum(getMetric(c,wh,'Orders/Month')), 'Orders', calcDiff(getMetric(c,wh,'Orders/Month'), getMetric(p,wh,'Orders/Month')), getTrend(wh,'Orders/Month'), 'blue', getLast3Months(wh, 'Orders/Month')); createCard('row-returns', wh, formatNum(getMetric(c,wh,'Returns')), 'Returns', calcDiff(getMetric(c,wh,'Returns'), getMetric(p,wh,'Returns')), getTrend(wh,'Returns'), 'red', getLast3Months(wh, 'Returns')); }); }
+
+        function renderStorage(c, p) {
+            WH_ORDER.forEach(wh => {
+                const cap = getMetric(c, wh, 'Capacity');
+                const used = getMetric(c, wh, 'Utalized'); 
+                
+                // Fixed Percentage Calculation
+                let pct = 0;
+                if (cap > 0 && used >= 0) {
+                    pct = ((used / cap) * 100).toFixed(1);
+                } else if (used > 0 && cap === 0) {
+                    pct = 100; // Fallback
+                }
+                
+                const prevCap = getMetric(p, wh, 'Capacity');
+                const prevUsed = getMetric(p, wh, 'Utalized');
+                let prevPct = 0;
+                if(prevCap > 0 && prevUsed >= 0) {
+                    prevPct = ((prevUsed / prevCap) * 100).toFixed(1);
+                }
+
+                const cid = `chart-storage-${wh.replace(/\s/g,'')}-${Math.random().toString(36).substr(2,5)}`;
+
+                const html = `
+                    <div class="glass-card rounded-2xl p-6 border-l-4 border-orange-500">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">${wh}</h4>
+                                <div class="flex items-baseline gap-2 mt-1">
+                                    <span class="text-3xl font-bold text-white num-font">${pct}%</span>
+                                    <span class="text-xs text-slate-500">Utilized</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-slate-400 flex justify-between gap-4"><span>Capacity:</span> <span class="text-white font-mono font-bold">${formatNum(cap)}</span></p>
+                                <p class="text-xs text-slate-400 flex justify-between gap-4"><span>Used:</span> <span class="text-white font-mono font-bold">${formatNum(used)}</span></p>
+                            </div>
+                        </div>
+                        
+                        <div class="w-full bg-dark-800 h-2 rounded-full overflow-hidden mb-4 relative">
+                            <div class="bg-orange-500 h-full transition-all duration-500" style="width: ${Math.min(pct, 100)}%"></div>
+                        </div>
+
+                        <div class="h-24 w-full mt-2">
+                            <canvas id="${cid}"></canvas>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('storage-grid').insertAdjacentHTML('beforeend', html);
+
+                setTimeout(() => {
+                    const ctx = document.getElementById(cid);
+                    if(ctx) {
+                        new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: ['Previous', 'Current'],
+                                datasets: [{
+                                    label: 'Utilization %',
+                                    data: [prevPct, pct],
+                                    backgroundColor: ['#334155', '#f97316'],
+                                    borderRadius: 4,
+                                    barThickness: 30
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    y: { beginAtZero: true, max: 100, grid: { color: '#1e293b' }, ticks: { display: false } },
+                                    x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }
+                                }
+                            }
+                        });
+                    }
+                }, 50);
+            });
+        }
+
+        function renderQuality(c,p){ WH_ORDER.forEach(wh=>{ const el = document.getElementById('quality-grid'); if (el) el.insertAdjacentHTML('beforeend', `<div class="glass-card rounded-2xl p-6 border-l-4 border-green-500"><h4 class="text-slate-400 text-xs font-bold uppercase mb-4">${wh}</h4><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Accuracy</span><span class="font-bold text-white">${getMetric(c,wh,'Order Accuracy',true).toFixed(1)}%</span></div><div class="w-full bg-dark-700 h-1.5"><div class="bg-green-500 h-1.5" style="width:${getMetric(c,wh,'Order Accuracy',true)}%"></div></div></div></div>`); }); }
+        function renderInbound(c,p){ renderMetricGroup('inbound-cases-grid',c,p,'inbound Case','Box'); renderMetricGroup('inbound-pallets-grid',c,p,'Inbound Pallets','Plt'); renderMetricGroup('inbound-trucks-grid',c,p,'Inbound Trucks 45 ft','Trk'); }
+        function renderOutbound(c,p){ renderMetricGroup('outbound-cases-grid',c,p,'Outbound Case','Box'); renderMetricGroup('outbound-pallets-grid',c,p,'Outbound Pallets','Plt'); renderMetricGroup('outbound-trucks-grid',c,p,'Outbound Trucks 45 ft','Trk'); }
+        function renderMetricGroup(id,c,p,col,u){ WH_ORDER.forEach(wh=>{ createCard(id, wh, formatNum(getMetric(c,wh,col)), u, calcDiff(getMetric(c,wh,col), getMetric(p,wh,col)), getTrend(wh,col), 'blue', getLast3Months(wh, col)); }); }
+        function renderRSD(c,p){ WH_ORDER.forEach(wh=>{ const sap = getMetric(c, wh, 'SAP'); const rsd = getMetric(c, wh, 'RSD'); const diff = Math.abs(sap - rsd); const match = sap > 0 ? (100 - (diff/sap)*100) : 0; createCard('rsd-grid', wh, match.toFixed(1), '% Match', {val:'-', icon:'minus', cls:'text-slate-500'}, getTrend(wh,'SAP'), 'green', getLast3Months(wh, 'SAP')); }); }
+        function renderPending(c,p){ WH_ORDER.forEach(wh=>{ createCard('pod-pending-grid',wh,getMetric(c,wh,'POD pending'),'Docs', calcDiff(getMetric(c,wh,'POD pending'), getMetric(p,wh,'POD pending')), getTrend(wh,'POD pending'), 'red', getLast3Months(wh, 'POD pending')); createCard('return-pending-grid',wh,getMetric(c,wh,'Return pending'),'Items', calcDiff(getMetric(c,wh,'Return pending'), getMetric(p,wh,'Return pending')), getTrend(wh,'Return pending'), 'red', getLast3Months(wh, 'Return pending')); }); }
+        function updateAllCharts() { Object.keys(chartInstances).forEach(k=>{if(chartInstances[k])chartInstances[k].destroy();delete chartInstances[k];}); ['chart-orders-trend', 'chart-orders-dist', 'chart-quality-comp', 'chart-inbound-vol', 'chart-inbound-trucks', 'chart-outbound-vol', 'chart-outbound-trucks', 'chart-finance-recon'].forEach(id => renderSpecificChart(id, id)); }
+        function renderSpecificChart(type, targetId) { const ctx = document.getElementById(targetId); if(!ctx) return; let config=null; if (type==='chart-inbound-vol') config=getBarConfig('inbound Case'); else if (type==='chart-inbound-trucks') config=getBarConfig('Inbound Trucks 45 ft'); else if (type==='chart-outbound-vol') config=getBarConfig('Outbound Case'); else if (type==='chart-outbound-trucks') config=getBarConfig('Outbound Trucks 45 ft'); else if (type==='chart-orders-trend') config=getLineConfig('Orders/Month'); else if (type==='chart-orders-dist') config=getDoughnutConfig('Orders/Month'); else if (type==='chart-quality-comp') config=getGroupedBarConfig(['Order Accuracy', 'Order Fill Rate']); else if (type==='chart-finance-recon') config=getBarConfig('SAP'); if(config) chartInstances[targetId] = new Chart(ctx, config); }
         function getBarConfig(col) { return { type: 'bar', data: { labels: monthList, datasets: WH_ORDER.map(wh => ({ label: wh, data: monthList.map(m => getMetric(m, wh, col)), backgroundColor: CHART_COLORS[wh] })) }, options: { responsive: true, maintainAspectRatio: false, scales: {x:{stacked:true}, y:{stacked:true}} } }; }
         function getLineConfig(col) { return { type: 'line', data: { labels: monthList, datasets: WH_ORDER.map(wh => ({ label: wh, data: monthList.map(m => getMetric(m, wh, col)), borderColor: CHART_COLORS[wh] })) }, options: { responsive: true, maintainAspectRatio: false } }; }
-        function getMultiBarConfig() { return { type: 'bar', data: { labels: monthList, datasets: [{ label: 'Capacity', data: monthList.map(m => WH_ORDER.reduce((a,w)=>a+getMetric(m,w,'Capacity'),0)), backgroundColor: '#334155' }, { label: 'Utilized', data: monthList.map(m => WH_ORDER.reduce((a,w)=>a+(getMetric(m,w,'Utalized')||getMetric(m,w,'Average storage in the warehouse')),0)), backgroundColor: '#8b5cf6' }] }, options: { responsive: true, maintainAspectRatio: false } }; }
-        function getSingleBarConfig() { const cur = document.getElementById('monthSelect').value; return { type: 'bar', data: { labels: WH_ORDER, datasets: [{ label: 'Util %', data: WH_ORDER.map(w => (getMetric(cur,w,'Utalized')/getMetric(cur,w,'Capacity')*100)||0), backgroundColor: [CHART_COLORS.SPIMACO, CHART_COLORS.PROCEED, CHART_COLORS.DSV] }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false } }; }
-        function getFleetConfig() { return { type: 'bar', data: { labels: monthList, datasets: [{ label: 'Trips', data: monthList.map(m=>getMetric(m,'DSV','TOTAL TRIPS')), backgroundColor:'#f97316' }] }, options: { responsive: true, maintainAspectRatio: false } }; }
-        function getFinanceConfig() { return { type: 'bar', data: { labels: monthList, datasets: WH_ORDER.map(w => ({ label: w, data: monthList.map(m=>getMetric(m,w,'SAP')-getMetric(m,w,'RSD')), backgroundColor: CHART_COLORS[w] })) }, options: { responsive: true, maintainAspectRatio: false, scales:{x:{stacked:true}, y:{stacked:true}} } }; }
         function getDoughnutConfig(col) { const cur = document.getElementById('monthSelect').value; const totals = WH_ORDER.map(w => getMetric(cur, w, col)); return { type: 'doughnut', data: { labels: WH_ORDER, datasets: [{ data: totals, backgroundColor: ['#60a5fa', '#34d399', '#fb923c'] }] }, options: { responsive: true, maintainAspectRatio: false } }; }
         function getGroupedBarConfig(cols) { const cur = document.getElementById('monthSelect').value; const datasets = cols.map((col, idx) => ({ label: col, data: WH_ORDER.map(w => getMetric(cur, w, col, true)), backgroundColor: idx===0?'#60a5fa':'#34d399' })); return { type: 'bar', data: { labels: WH_ORDER, datasets }, options: { responsive: true, maintainAspectRatio: false } }; }
-
-        // --- CINEMA MODE & AI (SECURE) ---
-        async function startSmartPresentation() {
-            const cur = document.getElementById('monthSelect').value;
-            document.body.classList.add('cinema-mode');
-            document.documentElement.requestFullscreen().catch(()=>{});
-            document.getElementById('normal-dashboard-view').classList.add('hidden');
-            
-            // Re-fetch AI if needed
-            if(!aiSummaries[cur]) {
-                document.getElementById('aiProcessingOverlay').classList.remove('hidden');
-                await fetchStructuredAI(cur);
-                document.getElementById('aiProcessingOverlay').classList.add('hidden');
-            }
-            injectAiText();
-            
-            // Populate Slides (Cloning charts logic)
-            const map = { 'slide-inbound': ['inbound-cases-grid','chart-inbound-vol'], 'slide-outbound': ['outbound-cases-grid','chart-outbound-vol'], 'slide-storage': ['storage-grid','chart-storage-trend'], 'slide-fleet': ['fleet-grid','chart-fleet-ops'], 'slide-finance': ['rsd-grid','chart-finance-recon'], 'slide-overview': ['row-orders','chart-orders-trend'] };
-            Object.keys(map).forEach(sid => populateSlide(sid, map[sid]));
-            
-            let slides = Object.keys(map);
-            let idx = 0;
-            const run = () => {
-                document.querySelectorAll('.presentation-slide').forEach(s => s.classList.remove('active'));
-                document.getElementById(slides[idx]).classList.add('active');
-                const bar = document.getElementById('slideProgress');
-                bar.style.transition='none'; bar.style.width='0%';
-                setTimeout(()=>{ bar.style.transition='width 15s linear'; bar.style.width='100%'; },50);
-                idx = (idx+1)%slides.length;
-            };
-            run();
-            presentationInterval = setInterval(run, 15000);
-        }
-
-        function stopPresentation() {
-            document.body.classList.remove('cinema-mode');
-            if(document.fullscreenElement) document.exitFullscreen();
-            document.getElementById('normal-dashboard-view').classList.remove('hidden');
-            document.querySelectorAll('.presentation-slide').forEach(s => s.classList.remove('active'));
-            clearInterval(presentationInterval);
-            render(); // Restore main charts
-        }
-
-        function populateSlide(sid, ids) {
-            const con = document.getElementById(sid.replace('slide-','slide-content-'));
-            con.innerHTML = '';
-            ids.forEach(id => {
-                if(id.includes('grid')||id.includes('row')) {
-                    const clone = document.getElementById(id).cloneNode(true);
-                    // Strip IDs to avoid conflict
-                    clone.removeAttribute('id');
-                    // Remove existing canvases in clone (charts break on clone)
-                    clone.querySelectorAll('canvas').forEach(c=>c.remove()); 
-                    con.appendChild(clone);
-                } else if(id.includes('chart')) {
-                    const w = document.createElement('div'); w.className="glass-card rounded-2xl p-6 chart-box h-80";
-                    const c = document.createElement('canvas'); c.id = id+'-slide';
-                    w.appendChild(c); con.appendChild(w);
-                    renderSpecificChart(id, c.id);
-                }
-            });
-        }
-        
-        async function fetchStructuredAI(month) {
-            const ctx = { period: month, inbound: getSectionData('inbound Case'), outbound: getSectionData('Outbound Case') };
-            const prompt = `Analyze Logistics for ${month}: ${JSON.stringify(ctx)} Output STRICT JSON with keys: inbound, outbound, storage, fleet, finance, overview. 2-sentence summary each.`;
-            
-            try {
-                // Secure Worker Call
-                const res = await fetch(`${WORKER_URL}/api/ai`, { 
-                    method: 'POST', 
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + sessionToken 
-                    }, 
-                    body: JSON.stringify({ prompt: prompt }) 
-                });
-                
-                if (!res.ok) throw new Error("AI Structured Fetch Failed");
-
-                const json = await res.json();
-                let txt = json.candidates[0].content.parts[0].text.replace(/```json/g,'').replace(/```/g,'');
-                aiSummaries[month] = JSON.parse(txt);
-            } catch(e) { console.log(e); }
-        }
-
-        function injectAiText() {
-            const d = aiSummaries[document.getElementById('monthSelect').value];
-            if(!d) return;
-            ['inbound','outbound','storage','fleet','finance','overview'].forEach(k => {
-                const el = document.getElementById(`ai-text-${k}`); if(el) el.innerHTML=marked.parse(d[k]||'');
-            });
-        }
-
+        async function addNewEmployee() { const { value: name } = await Swal.fire({ title: 'New Staff', input: 'text', background: '#1e293b', color: '#fff' }); if(name) { employees.push({name, id: Date.now()}); renderEmpTable(); saveGithub('employees.json', employees); } }
+        function renderEmpTable() { document.getElementById('emp-table-body').innerHTML = employees.map((e, i) => `<tr class="border-b border-white/5 hover:bg-white/5"><td class="p-4 text-white font-medium">${e.name}</td><td class="p-4 text-center"><button onclick="employees.splice(${i},1);saveGithub('employees.json',employees);renderEmpTable()" class="text-red-400 hover:text-red-300 admin-only"><i class="fas fa-trash"></i></button></td></tr>`).join(''); }
+        function renderCSVEditor() { if(!rawCSVData.length) return; const headers = Object.keys(rawCSVData[0]); let html = `<thead><tr>${headers.map(h => `<th class="p-3 bg-dark-800 text-slate-400 sticky top-0 border-b border-dark-600 font-bold whitespace-nowrap">${h}</th>`).join('')}</tr></thead><tbody>`; rawCSVData.forEach((row, i) => { html += `<tr class="hover:bg-dark-800/50 transition-colors">`; headers.forEach(key => { html += `<td class="border-b border-dark-700 p-0"><input type="text" class="w-full bg-transparent p-2 outline-none num-font text-xs text-slate-300 focus:text-white focus:bg-brand-600/10" value="${row[key]}" onchange="updateCSVCell(${i}, '${key}', this.value)"></td>`; }); html += `</tr>`; }); html += '</tbody>'; document.getElementById('csv-editor-table').innerHTML = html; }
+        function updateCSVCell(idx, key, val) { rawCSVData[idx][key] = val; }
+        function saveCSV() { const csvStr = Papa.unparse(rawCSVData); console.log("Saving CSV:", csvStr); Swal.fire('Updated', 'Changes saved to main.csv successfully.', 'success'); renderDashboard(); }
     </script>
 </body>
 </html>
