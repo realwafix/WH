@@ -1,0 +1,2520 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Workforce Hub & Dashboard | V3.0</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 900: '#020617', 800: '#0f172a', 700: '#1e293b', 600: '#334155' },
+                        brand: { 500: '#6366f1', 400: '#818cf8', 600: '#4f46e5' },
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    animation: { 'fade-in': 'fadeIn 0.5s ease-out', 'spin': 'spin 1s linear infinite', 'progress': 'progressAnim 10s linear infinite', 'slide-in-right': 'slideInRight 0.6s ease-out forwards', 'slide-out-left': 'slideOutLeft 0.5s ease-in forwards' },
+                    keyframes: { 
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        spin: { to: { transform: 'rotate(360deg)' } },
+                        progressAnim: { '0%': { width: '0%' }, '100%': { width: '100%' } },
+                        slideInRight: { '0%': { opacity: '0', transform: 'translateX(20px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
+                        slideOutLeft: { '0%': { opacity: '1', transform: 'translateX(0)' }, '100%': { opacity: '0', transform: 'translateX(-20px)' } }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght+400;700&display=swap" rel="stylesheet">
+    
+    <!-- FIX: Move chart initialization here after Chart.js is loaded -->
+    <script>
+        // Check if Chart is defined before accessing it
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.color = '#94a3b8'; 
+            Chart.defaults.borderColor = '#1e293b';
+        }
+    </script>
+    <!-- END FIX -->
+
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; overflow-x: hidden; scroll-behavior: smooth; }
+        .num-font { font-family: 'JetBrains Mono', monospace; }
+        .glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .glass-card:hover { transform: translateY(-3px); border-color: rgba(99, 102, 241, 0.4); }
+        
+        /* Shift Card Hover Effect */
+        .shift-card-container { position: relative; }
+        .shift-staff-overlay { 
+            position: absolute; inset: 0; background: rgba(2, 6, 23, 0.95); 
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            opacity: 0; transition: opacity 0.3s ease; z-index: 20; padding: 1rem; text-align: center;
+            backdrop-filter: blur(5px); pointer-events: none;
+        }
+        .shift-card-container:hover .shift-staff-overlay { opacity: 1; pointer-events: auto; }
+
+        .sparkline-container { height: 50px; width: 100%; margin-top: 10px; opacity: 0.8; }
+        .chart-box { position: relative; height: 320px; width: 100%; }
+        
+        #loginOverlay { position: fixed; inset: 0; background: #020617; z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        
+        /* Loading Overlay Enhancement */
+        #loadingOverlayData { 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(2,6,23,0.95); 
+            z-index: 9000; 
+            display: none; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            transition: opacity 0.5s ease;
+            opacity: 0;
+        }
+        .beautiful-spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid #1e293b;
+            border-top-color: #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Interactive Matrix Table */
+        .matrix-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid #334155; user-select: none; }
+        .matrix-table { width: 100%; border-collapse: separate; border-spacing: 1px; min-width: 1000px; background: #0f172a; }
+        .matrix-th { background: #1e293b; color: #94a3b8; padding: 8px; text-align: center; font-size: 0.7rem; width: 30px; }
+        .matrix-td-name { background: #1e293b; color: white; padding: 6px 12px; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10; border-right: 2px solid #334155; }
+        .matrix-cell { 
+            background: #0f172a; cursor: pointer; height: 36px; text-align: center; 
+            transition: background 0.1s; border: 1px solid #1e293b; font-size: 0.75rem; color: #fff;
+        }
+        .matrix-cell:hover { border-color: white; }
+        .matrix-td-action { background: #1e293b; padding: 4px; border-left: 2px solid #334155; position: sticky; right: 0; z-index: 10; width: 120px; text-align: center; }
+
+        /* Matrix Colors */
+        .cell-m { background-color: #facc15 !important; color: black !important; } /* Morning - Yellow */
+        .cell-e { background-color: #60a5fa !important; color: black !important; } /* Evening - Blue */
+        .cell-n { background-color: #f87171 !important; color: black !important; } /* Night - Red */
+        .cell-weekend { background-color: #334155; opacity: 0.4; pointer-events: none; }
+
+        /* Tool Palette */
+        .tool-btn { transition: all 0.2s; border: 2px solid transparent; }
+        .tool-btn.active { transform: scale(1.1); border-color: white; box-shadow: 0 0 10px rgba(255,255,255,0.3); }
+
+        /* Email Table Styles (Hidden, used for Copy) */
+        .email-table-out { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; text-align: center; color: black; background: white; }
+        .email-th { background-color: #f4b084; color: black; font-weight: bold; padding: 6px; border: 1px solid #000; }
+        .email-td { border: 1px solid #000; padding: 4px; height: 20px; }
+        .email-td-name { border: 1px solid #000; padding: 4px; text-align: left; font-weight: bold; background: #eee; width: 120px; }
+        .email-m { background-color: #ffff00; color: black; }
+        .email-e { background-color: #00b0f0; color: black; }
+        .email-n { background-color: #ff0000; color: black; }
+
+        /* Dashboard Shift Cards */
+        .d-shift-card { padding: 1.5rem; border-radius: 1rem; display: flex; flex-direction: column; height: 100%; border: 1px solid rgba(255,255,255,0.1); }
+        .d-morning { background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.05)); border-color: rgba(234, 179, 8, 0.5); }
+        .d-evening { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)); border-color: rgba(59, 130, 246, 0.5); }
+        .d-night { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05)); border-color: rgba(239, 68, 68, 0.5); }
+        
+        /* New Shift Metrics Card Styles */
+        .shift-metric-card {
+            background: #0f172a;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            border: 1px solid #334155;
+            transition: all 0.2s;
+        }
+
+        .admin-hidden, .manager-hidden, .supervisor-hidden { display: none !important; }
+        .manager-access { display: block; } 
+        
+        .nav-tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; color: #94a3b8; }
+        .nav-tab:hover { background: rgba(255,255,255,0.05); color: white; }
+        .nav-tab.active { background: #1e293b; color: #fff; }
+
+        /* Quick Nav - MODIFIED TO BE IN SIDEBAR */
+        .quick-nav-container { padding-left: 0.75rem; padding-right: 0.75rem; padding-top: 1rem; padding-bottom: 1rem; border-top: 1px solid #1e293b; }
+        .quick-nav-btn { 
+            display: flex; align-items: center; padding: 0.5rem 0.75rem; 
+            border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; 
+            transition: all 0.2s; color: #94a3b8; cursor: pointer;
+        }
+        .quick-nav-btn:hover { background: rgba(255,255,255,0.05); color: white; }
+        .quick-nav-btn.active { background: #1e293b; color: #fff; }
+        
+        .section-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid; padding-left: 0.75rem; }
+        .title-container { margin-bottom: 1.5rem; display: flex; align-items: center; }
+
+        /* Icon Picker Grid */
+        .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 150px; overflow-y: auto; margin-top: 10px; border: 1px solid #334155; padding: 8px; border-radius: 8px; }
+        .icon-option { background: #334155; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 36px; transition: all 0.2s; color: #94a3b8; }
+        .icon-option:hover, .icon-option.selected { background: #6366f1; color: white; transform: scale(1.1); border: 1px solid white; }
+        
+        /* Presentation Overlay Effects (Restored to simpler) */
+        .slide-content {
+            opacity: 0;
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        /* Presentation Section Title Style (Restored to simpler) */
+        .pres-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1.5rem;
+            border-left: 3px solid #6366f1;
+            padding-left: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* Presentation Progress Bar Styling */
+        .progress-bar-container { width: 100%; height: 4px; background: #1e293b; margin-top: 4px; }
+        .progress-bar { height: 100%; background: #ef4444; width: 0%; transform-origin: left; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- LOGIN -->
+    <div id="loginOverlay">
+        <div class="glass-card p-8 rounded-2xl w-96 text-center border border-dark-600">
+            <div class="mb-6 flex justify-center"><div class="h-14 w-14 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg"><i class="fas fa-shield-alt text-2xl text-white"></i></div></div>
+            <h2 class="text-xl font-bold text-white mb-2">Logistics Manager</h2>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <input type="text" id="username" placeholder="Username" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 px-4 outline-none focus:border-brand-500" required>
+                <input type="password" id="password" placeholder="Password" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg py-2.5 px-4 outline-none focus:border-brand-500" required>
+                <button type="submit" id="loginBtn" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 rounded-lg shadow-lg">Access System</button>
+            </form>
+            <p id="loginError" class="text-red-500 text-xs mt-4 hidden">Invalid Credentials</p>
+        </div>
+    </div>
+
+    <!-- LOADING (Enhanced) -->
+    <div id="loadingOverlayData">
+        <div class="beautiful-spinner mb-4"></div>
+        <p class="text-slate-400 font-mono text-sm">Loading Data...</p>
+    </div>
+    
+    <!-- PRESENTATION OVERLAY (Updated Language) -->
+    <div id="presentationOverlay" class="fixed inset-0 bg-dark-900 z-[9500] hidden flex-col transition-opacity duration-500 opacity-0">
+        <div class="flex-none h-14 bg-dark-800 border-b border-dark-700 flex items-center justify-between px-6">
+            <h3 class="text-white text-lg font-bold flex items-center gap-2"><i class="fas fa-tv text-red-500"></i> Dashboard Presentation (<span id="currentSlideTitle"></span>)</h3>
+            <button onclick="stopPresentation()" class="bg-brand-600 hover:bg-brand-500 text-white px-3 py-1.5 rounded text-xs font-bold shadow-lg flex items-center gap-2 transition-colors"><i class="fas fa-times"></i> Exit Presentation</button>
+        </div>
+        <div id="presentationContent" class="flex-1 overflow-hidden relative">
+            <!-- Content will be cloned here -->
+        </div>
+        <div class="flex-none h-6 bg-dark-800 border-t border-dark-700 flex flex-col justify-center items-center p-0">
+            <div class="progress-bar-container"><div id="slideProgressBar" class="progress-bar"></div></div>
+        </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="w-20 md:w-72 bg-dark-800 border-r border-dark-700 flex flex-col z-20 hidden md:flex">
+        <div class="h-20 flex items-center px-6 border-b border-dark-700 bg-dark-900/50">
+            <div class="h-10 w-10 bg-brand-600 rounded-lg flex items-center justify-center mr-3"><i class="fas fa-cubes text-white"></i></div>
+            <div class="hidden md:block"><h1 class="text-lg font-bold text-white">Logistics Manager</h1><p class="text-[10px] text-brand-400 tracking-[0.2em] font-bold">hub</p></div>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-6 space-y-1 px-3">
+            <a href="#" onclick="showMainView('dashboard')" class="nav-btn bg-dark-700 text-white flex items-center px-4 py-3 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-chart-pie w-5"></i><span class="ml-3 text-sm font-bold hidden md:block">Dashboard</span></a>
+            
+            <!-- QUICK NAVIGATION (New Placement) -->
+            <div class="quick-nav-container md:block" id="quickNav">
+                <p class="px-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 hidden md:block">Dashboard Access</p>
+                <div class="space-y-1">
+                    <div class="quick-nav-btn active" data-target="shift-log-display" onclick="scrollToId('shift-log-display')"><i class="fas fa-calendar-day w-5 text-green-400"></i><span class="ml-3 hidden md:block">Daily Shift Performance</span></div>
+                    <div class="quick-nav-btn" data-target="overview" onclick="scrollToId('overview')"><i class="fas fa-tachometer-alt w-5 text-brand-400"></i><span class="ml-3 hidden md:block">Overview</span></div>
+                    <div class="quick-nav-btn" data-target="storage" onclick="scrollToId('storage')"><i class="fas fa-boxes w-5 text-orange-400"></i><span class="ml-3 hidden md:block">Storage Capacity & Utilization (Manual)</span></div>
+                    <div class="quick-nav-btn" data-target="quality" onclick="scrollToId('quality')"><i class="fas fa-check-circle w-5 text-emerald-400"></i><span class="ml-3 hidden md:block">Quality</span></div>
+                    <div class="quick-nav-btn" data-target="inbound" onclick="scrollToId('inbound')"><i class="fas fa-sign-in-alt w-5 text-blue-400"></i><span class="ml-3 hidden md:block">Inbound</span></div>
+                    <div class="quick-nav-btn" data-target="outbound" onclick="scrollToId('outbound')"><i class="fas fa-sign-out-alt w-5 text-indigo-400"></i><span class="ml-3 hidden md:block">Outbound</span></div>
+                    <div class="quick-nav-btn" data-target="finance" onclick="scrollToId('finance')"><i class="fas fa-chart-bar w-5 text-yellow-400"></i><span class="ml-3 hidden md:block">RSD & Finance</span></div>
+                    <div class="quick-nav-btn" data-target="pending" onclick="scrollToId('pending')"><i class="fas fa-exclamation-triangle w-5 text-red-500"></i><span class="ml-3 hidden md:block">Pending Actions</span></div>
+                    <div class="quick-nav-btn" data-target="monthly-schedule" onclick="scrollToId('monthly-schedule')"><i class="fas fa-calendar-alt w-5 text-slate-400"></i><span class="ml-3 hidden md:block">Monthly Schedule Snapshot</span></div>
+                </div>
+            </div>
+            
+            <div class="mt-6 border-t border-dark-700 pt-4">
+                <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 hidden md:block">Operations</p>
+                <a href="#" onclick="showMainView('workforce')" class="nav-btn flex items-center px-4 py-3 rounded-xl text-slate-400 hover:bg-dark-700 hover:text-white transition-all"><i class="fas fa-users-cog w-5 text-blue-400"></i><span class="ml-3 text-sm font-bold hidden md:block">Workforce Hub</span></a>
+            </div>
+        </nav>
+        
+        <div class="p-6 border-t border-dark-700 bg-dark-900/30 hidden md:block footer-info">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-xs text-white font-bold" id="userAvatar">U</div>
+                <div><p class="text-xs text-white font-bold" id="userNameDisplay">User</p><button onclick="location.reload()" class="text-[10px] text-red-400 hover:text-red-300">Logout</button></div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-full bg-dark-900 relative overflow-hidden">
+        <!-- HEADER -->
+        <header class="h-16 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-8 z-30">
+            <div><h2 class="text-xl font-bold text-white" id="pageTitle">Dashboard Overview</h2><p class="text-xs text-slate-400" id="lastUpdateTxt">Syncing...</p></div>
+            <div class="flex items-center gap-4">
+                <!-- MANUAL REFRESH BUTTON (جديد) -->
+                <button onclick="refreshAllData()" class="bg-dark-700 hover:bg-dark-600 text-slate-300 px-3 py-1.5 rounded text-xs font-bold shadow-lg flex items-center gap-2 transition-colors"><i class="fas fa-sync-alt"></i> Refresh</button>
+                
+                <button onclick="startPresentation()" class="bg-red-600 hover:bg-red-500 text-white px-3 py-1.5 rounded text-xs font-bold shadow-lg flex items-center gap-2 transition-colors"><i class="fas fa-tv"></i> Presentation</button>
+                
+                <div id="save-indicator" class="hidden flex items-center text-green-400 text-xs font-bold mr-4"><i class="fas fa-check-circle mr-2"></i> Saved</div>
+                <div class="h-6 w-px bg-dark-600 mx-2"></div>
+                <select id="monthSelect" class="bg-dark-900 border border-dark-600 text-white text-xs rounded pl-3 pr-8 py-1.5 outline-none focus:border-brand-500"></select>
+            </div>
+        </header>
+
+        <div id="contentArea" class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth relative" onscroll="updateQuickNav()">
+            
+            <!-- Quick Nav (Removed floating version) -->
+
+            <!-- ===== DASHBOARD ===== -->
+            <div id="view-dashboard" class="main-view space-y-12 pb-20">
+                
+                <!-- SHIFT CARDS & LOG (Restricted to Manager/Admin) -->
+                <div id="shift-log-display" class="hidden animate-fade-in mb-10 manager-access">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="title-container border-green-500 m-0"><h3 class="section-title text-green-400">Daily Shift Performance</h3></div>
+                        <span class="bg-green-900/30 text-green-400 px-3 py-1 rounded text-xs font-mono font-bold" id="shift-log-date">--/--/----</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Morning -->
+                        <div class="shift-card-container group">
+                            <div class="d-shift-card d-morning">
+                                <div class="flex justify-between items-center mb-4 border-b border-yellow-500/30 pb-2">
+                                    <h4 class="text-xl font-bold text-yellow-100 flex items-center gap-2"><i class="fas fa-sun text-yellow-400"></i> Morning Shift</h4>
+                                </div>
+                                <div class="space-y-3 text-sm text-yellow-50/80 flex-1" id="card-stats-morning">
+                                    <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
+                                </div>
+                            </div>
+                            <div class="shift-staff-overlay rounded-xl">
+                                <h5 class="text-yellow-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
+                                <div id="card-staff-morning" class="text-white text-sm font-medium space-y-1"></div>
+                            </div>
+                        </div>
+                        <!-- Evening -->
+                        <div class="shift-card-container group">
+                            <div class="d-shift-card d-evening">
+                                <div class="flex justify-between items-center mb-4 border-b border-blue-500/30 pb-2">
+                                    <h4 class="text-xl font-bold text-blue-100 flex items-center gap-2"><i class="fas fa-moon text-blue-400"></i> Evening Shift</h4>
+                                </div>
+                                <div class="space-y-3 text-sm text-blue-50/80 flex-1" id="card-stats-evening">
+                                    <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
+                                </div>
+                            </div>
+                            <div class="shift-staff-overlay rounded-xl">
+                                <h5 class="text-blue-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
+                                <div id="card-staff-evening" class="text-white text-sm font-medium space-y-1"></div>
+                            </div>
+                        </div>
+                        <!-- Night -->
+                        <div class="shift-card-container group">
+                            <div class="d-shift-card d-night">
+                                <div class="flex justify-between items-center mb-4 border-b border-red-500/30 pb-2">
+                                    <h4 class="text-xl font-bold text-red-100 flex items-center gap-2"><i class="fas fa-star text-red-400"></i> Night Shift</h4>
+                                </div>
+                                <div class="space-y-3 text-sm text-red-50/80 flex-1" id="card-stats-night">
+                                    <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
+                                </div>
+                            </div>
+                            <div class="shift-staff-overlay rounded-xl">
+                                <h5 class="text-red-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
+                                <div id="card-staff-night" class="text-white text-sm font-medium space-y-1"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Shift Metrics Cards (New Requirement) -->
+                    <div class="glass-card rounded-2xl p-6 mt-8 border border-dark-700">
+                        <h4 class="text-white font-bold text-sm mb-4"><i class="fas fa-calendar-alt text-green-400 mr-2"></i>Daily Shift Metrics (Last 7 Logs)</h4>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 overflow-x-auto pb-4" id="shift-metrics-grid">
+                            <!-- Cards populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Shift Charts (New Requirement) -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+                        <div class="glass-card rounded-2xl p-6 border border-dark-700"><h4 class="text-white font-bold text-sm mb-4">Received Trend by Day</h4><div class="h-64 w-full"><canvas id="chart-shift-rec-trend"></canvas></div></div>
+                        <div class="glass-card rounded-2xl p-6 border border-dark-700"><h4 class="text-white font-bold text-sm mb-4">Dispatched Trend by Day</h4><div class="h-64 w-full"><canvas id="chart-shift-disp-trend"></canvas></div></div>
+                        <div class="glass-card rounded-2xl p-6 border border-dark-700"><h4 class="text-white font-bold text-sm mb-4">Received Trucks Trend by Day</h4><div class="h-64 w-full"><canvas id="chart-shift-trucks-trend"></canvas></div></div>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+                        <div class="glass-card rounded-2xl p-6 border border-dark-700"><h4 class="text-white font-bold text-sm mb-4">Total Received by Shift</h4><div class="h-64 w-full"><canvas id="chart-shift-rec-shift"></canvas></div></div>
+                        <div class="glass-card rounded-2xl p-6 border border-dark-700"><h4 class="text-white font-bold text-sm mb-4">Total Dispatched by Shift</h4><div class="h-64 w-full"><canvas id="chart-shift-disp-shift"></canvas></div></div>
+                        <div class="glass-card rounded-2xl p-6 border border-dark-700"><h4 class="text-white font-bold text-sm mb-4">Total Trucks Handled by Shift</h4><div class="h-64 w-full"><canvas id="chart-shift-trucks-shift"></canvas></div></div>
+                    </div>
+
+                    <!-- Original Shift Trend Chart (Kept but moved to end) -->
+                    <div class="glass-card rounded-2xl p-6 mt-6 border border-dark-700">
+                        <h4 class="text-white font-bold text-sm mb-4"><i class="fas fa-chart-line text-brand-400 mr-2"></i>Overall Daily Trend (Received vs Dispatched)</h4>
+                        <div class="h-64 w-full">
+                            <canvas id="chart-shift-trend"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="custom-cards-grid" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 hidden"></div>
+                
+                <!-- SECTIONS -->
+                <section id="overview" class="animate-fade-in"><div class="title-container border-brand-500"><h3 class="section-title text-brand-400">Overview</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-orders"></div><div class="grid grid-cols-3 gap-6 mb-8" id="row-returns"></div><div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10"><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Orders Trend</h4></div><div class="chart-box"><canvas id="chart-orders-trend"></canvas></div></div><div class="glass-card rounded-2xl p-8"><div class="flex justify-between items-center mb-6"><h4 class="text-white font-bold text-lg">Market Share</h4></div><div class="chart-box"><canvas id="chart-orders-dist"></canvas></div></div></div></section>
+                
+                <!-- STORAGE SECTION -->
+                <section id="storage" class="animate-fade-in"><div class="title-container border-orange-500"><h3 class="section-title text-orange-400">Storage Capacity & Utilization (Manual)</h3></div><div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="storage-grid"></div></section>
+
+                <!-- QUALITY SECTION (UPDATED) -->
+                <section id="quality" class="animate-fade-in">
+                    <div class="title-container border-emerald-500"><h3 class="section-title text-emerald-400">Quality</h3></div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="quality-grid">
+                        <!-- Order Accuracy Cards (Existing) -->
+                    </div>
+                    
+                    <!-- NEW QUALITY RATE CARDS -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 mb-8" id="quality-rate-grid"></div>
+
+                    <!-- NEW QUALITY TREND CHART -->
+                    <div class="glass-card rounded-2xl p-8 mt-10">
+                        <h4 class="text-white font-bold text-lg mb-6">Return and Damage Rate Trend</h4>
+                        <div class="chart-box"><canvas id="chart-quality-trend"></canvas></div>
+                    </div>
+
+                    <div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">Comparative Quality (Order Accuracy & Fill Rate)</h4><div class="chart-box"><canvas id="chart-quality-comp"></canvas></div></div>
+                </section>
+                
+                <section id="inbound" class="animate-fade-in"><div class="title-container border-blue-500"><h3 class="section-title text-blue-400">Inbound</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="inbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-inbound-trucks"></canvas></div></div></section>
+                <section id="outbound" class="animate-fade-in"><div class="title-container border-indigo-500"><h3 class="section-title text-indigo-400">Outbound</h3></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-cases-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-pallets-grid"></div><div class="grid grid-cols-3 gap-5 mb-6" id="outbound-trucks-grid"></div><div class="grid grid-cols-2 gap-6 mt-8"><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-vol"></canvas></div><div class="glass-card rounded-2xl p-8 chart-box"><canvas id="chart-outbound-trucks"></canvas></div></div></section>
+                
+                <!-- RSD & FINANCE SECTION (UPDATED) -->
+                <section id="finance" class="animate-fade-in">
+                    <div class="title-container border-yellow-500"><h3 class="section-title text-yellow-400">RSD & Finance</h3></div>
+                    
+                    <!-- New Vertical Cards for SAP vs RSD Match -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="rsd-vertical-cards-grid"></div>
+                    
+                    <!-- Existing Card Grid (Kept but repurposed for other metrics if needed) -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" id="rsd-grid"></div>
+                    
+                    <div class="glass-card rounded-2xl p-8 mt-10"><h4 class="text-white font-bold text-lg mb-6">SAP vs RSD Reconciliation (Historical)</h4><div class="chart-box"><canvas id="chart-finance-recon"></canvas></div></div>
+                </section>
+                
+                <section id="pending" class="animate-fade-in mt-16 mb-8"><div class="title-container border-red-600"><h3 class="section-title text-red-500">Pending Actions</h3></div><div class="grid grid-cols-3 gap-6 mb-8" id="pod-pending-grid"></div><div class="grid grid-cols-3 gap-6 mb-8" id="return-pending-grid"></div></section>
+            
+                <!-- MONTHLY SCHEDULE SNAPSHOT (Restricted) -->
+                <section id="monthly-schedule" class="animate-fade-in mt-12 mb-8 manager-access hidden">
+                    <div class="title-container border-slate-500"><h3 class="section-title text-slate-400"><i class="far fa-calendar-alt mr-2"></i> Monthly Schedule Snapshot</h3></div>
+                    <div class="flex justify-end mb-4"><button onclick="exportTableToExcel('dashboard-monthly-preview', 'جدول_شهري_')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Export Monthly Schedule</button></div>
+                    <div id="dashboard-monthly-preview" class="w-full">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+            </div>
+
+            <!-- ===== WORKFORCE HUB ===== -->
+            <div id="view-workforce" class="main-view hidden animate-fade-in h-full flex flex-col">
+                <div class="flex justify-between items-center border-b border-dark-700 pb-2 mb-6">
+                    <div class="flex gap-2 overflow-x-auto">
+                        <button onclick="switchAdminTab('roster')" class="nav-tab active" id="tab-roster">Live Operations</button>
+                        <button onclick="switchAdminTab('planner')" class="nav-tab ops-access" id="tab-planner">Shift Planner</button>
+                        <button onclick="switchAdminTab('overtime')" class="nav-tab ops-access" id="tab-overtime">Weekend & OT</button>
+                        <button onclick="switchAdminTab('data')" class="nav-tab admin-only" id="tab-data">Uploads & Metrics</button>
+                        <button onclick="switchAdminTab('staff')" class="nav-tab ops-access" id="tab-staff">Staff Directory</button>
+                    </div>
+                </div>
+
+                <div id="subview-roster" class="sub-view flex-1 flex flex-col space-y-8">
+                      <div class="glass-card p-6 rounded-xl border-t-4 border-purple-500 manager-access">
+                        <h4 class="text-white font-bold mb-4 flex items-center gap-2"><i class="fas fa-trophy text-purple-400"></i> Monthly OT Leaderboard</h4>
+                        <div class="overflow-hidden rounded-lg border border-dark-700">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-dark-800 text-slate-400"><tr><th class="p-3">Rank</th><th class="p-3">Name</th><th class="p-3 text-right">Hours</th></tr></thead>
+                                <tbody id="mgr-leaderboard" class="text-slate-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="subview-planner" class="sub-view hidden h-full flex flex-col">
+                    <div class="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div><label class="block text-xs text-slate-400 mb-1">Year</label><input type="number" id="plannerYear" class="bg-dark-800 border border-dark-600 rounded px-2 py-1 text-white w-20" onchange="initPlannerMatrix()"></div>
+                            <div><label class="block text-xs text-slate-400 mb-1">Month</label><select id="plannerMonth" class="bg-dark-800 border border-dark-600 text-white rounded px-2 py-1 text-white w-32" onchange="initPlannerMatrix()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+                        </div>
+                        <div class="flex gap-2">
+                             <button onclick="exportTableToExcel('planner-matrix', 'جدول_شهر_')" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2"><i class="fas fa-file-excel"></i> Export Schedule</button>
+                             <button onclick="copyTableToClipboard('planner-matrix')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2"><i class="fas fa-envelope"></i> Copy for Email</button>
+                             <button onclick="savePlanner()" class="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2 admin-only"><i class="fas fa-save"></i> Save Schedule</button>
+                        </div>
+                    </div>
+                    <div class="matrix-wrapper flex-1 custom-scrollbar"><table class="matrix-table" id="planner-matrix"></table></div>
+                </div>
+
+                <div id="subview-overtime" class="sub-view hidden h-full">
+                    <div class="flex gap-4 mb-6">
+                        <input type="month" id="otMonthPicker" class="bg-dark-800 border border-dark-600 text-white rounded px-3 py-2" onchange="renderWeekendTable()">
+                        <button onclick="copyTableToClipboard('weekend-table-preview')" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-bold shadow-lg flex items-center gap-2"><i class="fas fa-envelope"></i> Copy for Email</button>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                         <div class="glass-card p-6 rounded-xl border-t-4 border-orange-500 h-fit admin-only">
+                            <h3 class="text-white font-bold mb-4">Add Weekend OT</h3>
+                            <div class="space-y-3">
+                                <select id="otEmpSelect" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-3 py-2 text-sm"></select>
+                                <input type="date" id="otDate" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-3 py-2 text-sm">
+                                <div class="flex gap-2">
+                                    <input type="time" id="otTimeFrom" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-2 py-2 text-sm">
+                                    <input type="time" id="otTimeTo" class="w-full bg-dark-900 border border-dark-600 text-white rounded px-2 py-2 text-sm">
+                                </div>
+                                <button onclick="addOvertime()" class="w-full bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded font-bold">Add Shift</button>
+                            </div>
+                        </div>
+                        <div class="col-span-2 bg-white p-4 rounded-lg overflow-x-auto text-black h-fit" id="weekend-table-preview"></div>
+                    </div>
+                </div>
+
+                <div id="subview-data" class="sub-view hidden h-full space-y-8 admin-only">
+                    <!-- Manual Metrics Editor -->
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-orange-500">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-white mb-1">Manual Metric Entry</h3>
+                            <button onclick="saveManualMetrics()" class="bg-orange-600 hover:bg-orange-500 text-white px-4 py-2 rounded font-bold shadow-lg text-sm">Save Metrics</button>
+                        </div>
+                        <p class="text-xs text-slate-400 mb-6">Manually override Storage, Pending Actions, and Finance data for each warehouse.</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div><label class="text-xs text-slate-400">Target Month</label><select id="mm-month" class="w-full bg-dark-900 border border-dark-600 text-white rounded p-2" onchange="loadManualForm()"></select></div>
+                            <div><label class="text-xs text-slate-400">Warehouse</label><select id="mm-wh" class="w-full bg-dark-900 border border-dark-600 text-white rounded p-2" onchange="loadManualForm()"><option value="SPIMACO">SPIMACO</option><option value="PROCEED">PROCEED</option><option value="DSV">DSV</option></select></div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Storage -->
+                            <div class="bg-dark-900/50 p-4 rounded-lg border border-dark-700">
+                                <h4 class="text-orange-400 font-bold text-xs uppercase mb-3 border-b border-dark-600 pb-2">Storage</h4>
+                                <div class="space-y-3">
+                                    <div><label class="text-[10px] text-slate-500 uppercase">Total Capacity</label><input type="number" id="mm-cap" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                    <div><label class="text-[10px] text-slate-500 uppercase">Used Space</label><input type="number" id="mm-used" class="w-full bg-dark-800 border border-dark-600 rounded p-1.5 text-white text-sm"></div>
+                                </div>
+                            </div>
+                            <!-- Finance -->
+                            <div class="bg-dark-900/50 p-4 rounded-lg border border-dark-700">
+                                <h4 class="text-yellow-400 font-bold text-xs uppercase mb-3 border-b border-dark-600 pb-2">RSD & Finance</h4>
+                                <div class="space-y-3">
+                                    <div><label class="text-[10px] text-slate-500 uppercase">SAP Value</label><input type="number" id="mm-sap" class="w-full bg-dark-800 border border-dark-600 text-white text-sm"></div>
+                                    <div><label class="text-[10px] text-slate-500 uppercase">RSD Value</label><input type="number" id="mm-rsd" class="w-full bg-dark-800 border border-dark-600 text-white text-sm"></div>
+                                </div>
+                            </div>
+                            <!-- Pending -->
+                            <div class="bg-dark-900/50 p-4 rounded-lg border border-dark-700">
+                                <h4 class="text-red-400 font-bold text-xs uppercase mb-3 border-b border-dark-600 pb-2">Pending Actions</h4>
+                                <div class="space-y-3">
+                                    <div><label class="text-[10px] text-slate-500 uppercase">POD Pending</label><input type="number" id="mm-pod" class="w-full bg-dark-800 border border-dark-600 text-white text-sm"></div>
+                                    <div><label class="text-[10px] text-slate-500 uppercase">Return Pending</label><input type="number" id="mm-ret" class="w-full bg-dark-800 border border-dark-600 text-white text-sm"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-indigo-500">
+                        <div class="flex justify-between items-center mb-4">
+                            <div><h3 class="text-xl font-bold text-white mb-1">Master CSV Editor</h3><p class="text-xs text-slate-400">Edit general metrics in <b>main.csv</b>.</p></div>
+                            <button onclick="saveCSV()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded font-bold shadow-lg flex items-center text-sm"><i class="fas fa-save mr-2"></i> Save Changes</button>
+                        </div>
+                        <div class="overflow-auto max-h-96 border border-dark-600 rounded bg-dark-900 custom-scrollbar"><table class="w-full text-xs text-left" id="csv-editor-table"></table></div>
+                    </div>
+                    
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-green-500">
+                        <h3 class="text-xl font-bold text-white mb-4">Upload Daily Shift Log</h3>
+                        <label class="inline-block bg-green-600 hover:bg-green-500 text-white border border-green-500 px-6 py-3 rounded-lg font-bold cursor-pointer transition-colors shadow-lg"><i class="fas fa-file-csv mr-2"></i> Select CSV File<input type="file" onchange="handleShiftLogUpload(this)" class="hidden" accept=".csv"></label>
+                    </div>
+                    
+                    <div class="glass-card p-8 rounded-xl border-l-4 border-brand-500">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-white font-bold text-xl">Add Custom Metric Card</h3>
+                            <button onclick="openAddCardModal()" class="bg-brand-600 text-white px-3 py-1.5 rounded text-xs font-bold">Add New</button>
+                        </div>
+                        <div id="custom-metric-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                </div>
+
+                <div id="subview-staff" class="sub-view hidden h-full">
+                    <div class="flex justify-between items-center mb-4 ops-access"><h3 class="text-white font-bold">Staff Directory</h3><button onclick="addNewEmployee()" class="bg-brand-600 text-white px-4 py-2 rounded text-xs font-bold admin-only">+ New Employee</button></div>
+                    <div class="glass-card rounded-xl overflow-hidden"><table class="w-full text-left"><thead class="bg-dark-800 text-slate-400 text-xs uppercase"><tr><th class="p-4">Name</th><th class="p-4">Staff ID</th><th class="p-4 text-center admin-only">Actions</th></tr></thead><tbody id="emp-table-body" class="text-slate-300 text-sm divide-y divide-dark-700"></tbody></table></div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const WORKER_URL = "https://api.wf6638.workers.dev"; // تأكد من أن هذا العنوان صحيح وفعال
+        const WH_ORDER = ['SPIMACO', 'PROCEED', 'DSV'];
+        const CHART_COLORS = { SPIMACO: '#60a5fa', PROCEED: '#34d399', DSV: '#fb923c' }; 
+        const COLORS = { 'SPIMACO': 'blue', 'PROCEED': 'green', 'DSV': 'orange', 'default': 'brand' };
+
+        let rawData = []; 
+        let monthList = []; 
+        let chartInstances = {}; 
+        let sparklineInstances = {}; 
+        let sessionToken = null; 
+        let currentUser = null; 
+        let employees = []; 
+        let shifts = {}; 
+        let overtime = []; 
+        let customCards = []; 
+        let masterShiftLogs = {}; 
+        let manualMetrics = {};
+        let currentTool = 'morning'; 
+        let isPainting = false;
+        let autoRefreshTimer = null; 
+        
+        // --- Presentation Mode Variables ---
+        let intervalTimer = null;
+        let slideIndex = 0;
+        const SLIDE_SECTIONS = [
+            { id: 'shift-log-display', title: 'Daily Shift Performance', icon: 'fas fa-calendar-day' },
+            { id: 'overview', title: 'Overview', icon: 'fas fa-tachometer-alt' },
+            { id: 'storage', title: 'Storage Capacity & Utilization', icon: 'fas fa-boxes' },
+            { id: 'quality', title: 'Quality', icon: 'fas fa-check-circle' },
+            { id: 'inbound', title: 'Inbound', icon: 'fas fa-sign-in-alt' },
+            { id: 'outbound', title: 'Outbound', icon: 'fas fa-sign-out-alt' },
+            { id: 'finance', title: 'RSD & Finance', icon: 'fas fa-chart-bar' },
+            { id: 'pending', title: 'Pending Actions', icon: 'fas fa-exclamation-triangle' },
+            { id: 'monthly-schedule', title: 'Monthly Schedule Snapshot', icon: 'far fa-calendar-alt' }
+        ];
+        const SLIDE_INTERVAL = 10000; // 10 seconds (10000ms)
+        
+        // --- Chart Mapping for dynamic rendering ---
+        const CHART_TYPE_MAP = {
+            'chart-orders-trend': { type: 'line', col: 'Orders/Month' },
+            'chart-orders-dist': { type: 'doughnut', col: 'Orders/Month' },
+            'chart-quality-comp': { type: 'groupedBar', cols: ['Order Accuracy', 'Order Fill Rate'] },
+            'chart-quality-trend': { type: 'qualityTrend' },
+            'chart-inbound-vol': { type: 'bar', col: 'inbound Case' },
+            'chart-inbound-trucks': { type: 'bar', col: 'Inbound Trucks 45 ft' },
+            'chart-outbound-vol': { type: 'bar', col: 'Outbound Case' },
+            'chart-outbound-trucks': { type: 'bar', col: 'Outbound Trucks 45 ft' },
+            'chart-finance-recon': { type: 'financeRecon' },
+            'chart-shift-trend': { type: 'shiftTrend' },
+            // New Shift Charts
+            'chart-shift-rec-trend': { type: 'shiftRecTrend' },
+            'chart-shift-disp-trend': { type: 'shiftDispTrend' },
+            'chart-shift-trucks-trend': { type: 'shiftTrucksTrend' },
+            'chart-shift-rec-shift': { type: 'shiftRecShift' },
+            'chart-shift-disp-shift': { type: 'shiftDispShift' },
+            'chart-shift-trucks-shift': { type: 'shiftTrucksShift' }
+        };
+
+        // --- Auto Refresh Logic ---
+        function startAutoRefresh() {
+            if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+            // Refresh every 5 minutes (300,000 ms)
+            autoRefreshTimer = setInterval(refreshAllData, 300000); 
+            console.log("Auto-refresh started (5 minutes interval).");
+        }
+
+        async function refreshAllData() {
+            console.log("Starting full data refresh...");
+            document.getElementById('lastUpdateTxt').innerText = 'Refreshing...';
+            
+            // Fetch GitHub JSONs
+            await refreshData();
+            
+            // Re-fetch and re-parse main CSV
+            try {
+                // استخدام عنوان GitHub الرئيسي لملف CSV
+                const res = await fetch('https://raw.githubusercontent.com/realwafix/WH/refs/heads/main/main.csv'); 
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status} when fetching main.csv`);
+                }
+
+                const csv = await res.text(); 
+                
+                await new Promise(resolve => {
+                    Papa.parse(csv, { 
+                        header: true, 
+                        skipEmptyLines: true, 
+                        complete: (res) => { 
+                            rawData = res.data; 
+                            resolve();
+                        } 
+                    });
+                });
+                
+                document.getElementById('lastUpdateTxt').innerText = 'Synced';
+                init(false); // Re-initialize without altering month selector structure, just re-render
+                
+                Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Data Refreshed', showConfirmButton: false, timer: 1500 });
+
+            } catch (error) {
+                document.getElementById('lastUpdateTxt').innerText = 'Refresh Failed';
+                console.error("Data refresh error:", error);
+                Swal.fire('Error', 'Failed to refresh core data. Check if main.csv is accessible or if Worker is operational.', 'error');
+            }
+        }
+        
+        function updateCountdown(count) {
+            // Not strictly needed with the progress bar, but kept for presentation context
+        }
+
+        function startPresentation() {
+            if (intervalTimer) return; 
+
+            // Hide main content and show overlay
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('presentationOverlay').classList.remove('hidden', 'opacity-0');
+            document.getElementById('presentationOverlay').classList.add('opacity-100');
+            
+            // Ensure data is rendered before starting the cycle
+            render(); 
+            
+            // Start progress bar animation
+            const progressBar = document.getElementById('slideProgressBar');
+            progressBar.style.animation = `progressAnim ${SLIDE_INTERVAL / 1000}s linear infinite`;
+
+            slideIndex = -1; 
+            
+            // Start the cycle immediately
+            nextSlide(); 
+
+            // Set main interval
+            intervalTimer = setInterval(nextSlide, SLIDE_INTERVAL);
+        }
+
+        function stopPresentation() {
+            clearInterval(intervalTimer);
+            // Stop progress bar animation
+            const progressBar = document.getElementById('slideProgressBar');
+            progressBar.style.animation = 'none';
+            progressBar.style.width = '0%';
+            
+            intervalTimer = null;
+            
+            // Clean up cloned chart instances
+            if (window.clonedChartInstances) {
+                Object.values(window.clonedChartInstances).forEach(chart => {
+                    if (chart && chart.destroy) chart.destroy();
+                });
+                window.clonedChartInstances = {};
+            }
+            
+            // Hide overlay and show main content
+            document.getElementById('presentationOverlay').classList.remove('opacity-100');
+            document.getElementById('presentationOverlay').classList.add('opacity-0');
+            
+            setTimeout(() => {
+                document.getElementById('presentationOverlay').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                // Clean up cloned content
+                document.getElementById('presentationContent').innerHTML = ''; 
+                // Restore scroll position/quick nav state
+                updateQuickNav();
+            }, 500); // Match CSS transition duration
+        }
+        
+        // RESTORING simpler, reliable presentation logic
+        function nextSlide() {
+            // 1. Find the next visible section
+            let nextIndex = slideIndex;
+            let found = false;
+            
+            for (let i = 0; i < SLIDE_SECTIONS.length; i++) {
+                nextIndex = (nextIndex + 1) % SLIDE_SECTIONS.length;
+                const potentialSlide = SLIDE_SECTIONS[nextIndex];
+                const potentialElement = document.getElementById(potentialSlide.id);
+                
+                if (potentialElement && getComputedStyle(potentialElement).display !== 'none') {
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                stopPresentation();
+                return;
+            }
+            
+            slideIndex = nextIndex;
+            const currentSlide = SLIDE_SECTIONS[slideIndex];
+            
+            const presentationContent = document.getElementById('presentationContent');
+            const slideTitle = document.getElementById('currentSlideTitle');
+            const targetSection = document.getElementById(currentSlide.id);
+
+            // Reset and restart progress bar animation for the next slide
+            const progressBar = document.getElementById('slideProgressBar');
+            progressBar.style.animation = 'none';
+            progressBar.offsetHeight; // Trigger reflow
+            progressBar.style.animation = `progressAnim ${SLIDE_INTERVAL / 1000}s linear`;
+
+            // 2. Clear previous content and its chart instances
+            presentationContent.innerHTML = '';
+            if (window.clonedChartInstances) {
+                Object.values(window.clonedChartInstances).forEach(chart => { if (chart && chart.destroy) chart.destroy(); });
+                window.clonedChartInstances = {};
+            }
+            
+            // 3. Clone the content and prepare for injection
+            const clonedContent = targetSection.cloneNode(true);
+            clonedContent.id = `presentation-slide-${currentSlide.id}`;
+            clonedContent.classList.remove('hidden', 'animate-fade-in'); 
+            clonedContent.classList.add('slide-content'); // Add class for fade-in effect
+            clonedContent.style.height = '100%';
+            clonedContent.style.overflowY = 'auto'; 
+            clonedContent.style.padding = '2rem'; 
+            clonedContent.style.backgroundColor = 'var(--tw-colors-dark-900)'; 
+            
+            // Revert title enhancement for presentation (use simpler one)
+            const titleContainer = clonedContent.querySelector('.title-container');
+            if (titleContainer) {
+                titleContainer.innerHTML = `<h3 class="pres-title"><i class="${currentSlide.icon} text-brand-400"></i> ${currentSlide.title}</h3>`;
+            }
+
+
+            // 4. Prepare Charts for Re-initialization
+            const chartsToRedraw = [];
+            clonedContent.querySelectorAll('canvas').forEach(canvas => {
+                const originalId = canvas.id;
+                if (CHART_TYPE_MAP[originalId]) {
+                    const newId = `pres-chart-${originalId}`; 
+                    canvas.id = newId;
+                    chartsToRedraw.push({ newId, originalId, typeInfo: CHART_TYPE_MAP[originalId] });
+                }
+            });
+
+            presentationContent.appendChild(clonedContent);
+            
+            // 5. Update Title & Scroll
+            slideTitle.textContent = currentSlide.title;
+            presentationContent.scrollTop = 0;
+            
+            // 6. Re-initialize the charts
+            window.clonedChartInstances = {};
+            chartsToRedraw.forEach(({ newId, originalId, typeInfo }) => {
+                const ctx = document.getElementById(newId);
+                if (!ctx) return;
+                
+                if (typeInfo.type === 'bar' || typeInfo.type === 'line' || typeInfo.type === 'doughnut' || typeInfo.type === 'groupedBar' || typeInfo.type === 'financeRecon' || typeInfo.type === 'qualityTrend') {
+                    renderChart(newId, typeInfo, true);
+                } else if (typeInfo.type.startsWith('shift')) {
+                    renderDynamicShiftChart(newId, typeInfo.type, true);
+                }
+            });
+        }
+        // END RESTORED presentation logic
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim(); 
+            const p = document.getElementById('password').value.trim();
+
+            const btn = document.getElementById('loginBtn'); btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+            try {
+                // Mock API call for login
+                const response = await fetch(`${WORKER_URL}/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) });
+                
+                // Mocking login response
+                const mockRoles = {
+                    'admin': 'admin',
+                    'manager': 'manager',
+                    'supervisor': 'supervisor',
+                    'guest': 'guest'
+                };
+                let role = mockRoles[u.toLowerCase()] || 'guest';
+
+                if (response.ok || role !== 'guest') {
+                    // const data = await response.json(); // Use this if API is active
+                    sessionToken = 'mock-token'; 
+                    currentUser = { username: u, role: role };
+                    document.getElementById('loginOverlay').style.display = 'none'; 
+                    document.getElementById('userNameDisplay').textContent = u; 
+                    document.getElementById('userAvatar').textContent = u.charAt(0).toUpperCase();
+                    applyRoleUI(currentUser.role); 
+                    
+                    // START: Consolidated Data Load
+                    await loadAllInitialData();
+                    // END: Consolidated Data Load
+
+                } else { 
+                    document.getElementById('loginError').classList.remove('hidden');
+                    btn.innerHTML = 'Access System';
+                }
+            } catch (error) { 
+                console.error(error); 
+                document.getElementById('loginError').classList.remove('hidden'); 
+                btn.innerHTML = 'Access System';
+            } 
+        }
+
+        function applyRoleUI(role) {
+            // Admin only elements
+            document.querySelectorAll('.admin-only').forEach(el => {
+                if (role === 'admin') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+
+            // Manager & Admin Access
+            document.querySelectorAll('.manager-access').forEach(el => {
+                if (role === 'admin' || role === 'manager') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+
+            // Ops Access (Tabs visible to Admin/Manager)
+            document.querySelectorAll('.ops-access').forEach(el => {
+                if (role === 'admin' || role === 'manager') el.classList.remove('hidden');
+                else el.classList.add('hidden');
+            });
+
+            // Staff Directory Table Fix: show/hide staff ID column
+            document.querySelectorAll('#subview-staff thead th:nth-child(2), #subview-staff tbody tr td:nth-child(2)').forEach(el => {
+                if (role === 'admin' || role === 'manager') {
+                     // Keep visible for Managers/Admins
+                } else {
+                    // Hide for others
+                    el.style.display = 'none';
+                }
+            });
+
+            // Ensure the main Workforce Hub content area is shown/hidden correctly based on access
+            if(role === 'guest' || role === 'supervisor') {
+                // Hide planner, ot, and data tabs if not manager/admin
+                document.getElementById('tab-planner')?.classList.add('hidden');
+                document.getElementById('tab-overtime')?.classList.add('hidden');
+                document.getElementById('tab-data')?.classList.add('hidden');
+
+                // Default to staff directory view if restricted
+                if (document.getElementById('view-workforce').classList.contains('active-view')) {
+                    switchAdminTab('staff');
+                }
+            } else {
+                // Default to roster view if manager/admin
+                if (document.getElementById('view-workforce').classList.contains('active-view')) {
+                    switchAdminTab('roster');
+                }
+            }
+        }
+
+        async function fetchGithub(file) { 
+            try { 
+                const response = await fetch(`${WORKER_URL}/api/github-get`, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({filename:file})});
+                
+                // Enhanced Error Logging
+                if (!response.ok) {
+                    console.error(`GitHub API Error for ${file}: Status ${response.status} - ${response.statusText}`);
+                    throw new Error(`Failed to fetch ${file}. Status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log(`Successfully fetched ${file}`);
+                return data;
+
+            } catch(e){
+                console.error(`Error during fetchGithub(${file}):`, e);
+                // Return fallback data structures on catastrophic failure
+                if (file === 'employees.json') return [];
+                if (file === 'shifts.json') return {};
+                if (file === 'overtime.json') return [];
+                if (file === 'custom_cards.json') return [];
+                if (file === 'shift_logs_master.json') return {};
+                if (file === 'manual_metrics.json') return {};
+            } 
+        }
+
+        async function saveGithub(file, data) {
+            document.getElementById('save-indicator').classList.remove('hidden');
+            try {
+                const response = await fetch(`${WORKER_URL}/api/github-put`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: file, content: JSON.stringify(data, null, 2) }) });
+                if (!response.ok) {
+                    console.error(`GitHub API Save Error for ${file}: Status ${response.status} - ${response.statusText}`);
+                    throw new Error('Failed to save to Github');
+                }
+                
+                setTimeout(() => { document.getElementById('save-indicator').classList.add('hidden'); }, 1500);
+            } catch (error) {
+                console.error(`Error saving ${file}:`, error);
+                document.getElementById('save-indicator').classList.remove('text-green-400');
+                document.getElementById('save-indicator').classList.add('text-red-400');
+                document.getElementById('save-indicator').innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i> Save Failed';
+                setTimeout(() => { 
+                    document.getElementById('save-indicator').classList.add('hidden');
+                    document.getElementById('save-indicator').classList.add('text-green-400');
+                    document.getElementById('save-indicator').classList.remove('text-red-400');
+                    document.getElementById('save-indicator').innerHTML = '<i class="fas fa-check-circle mr-2"></i> Saved';
+                }, 3000);
+            }
+        }
+
+        // Fetches all JSON configuration and employee/shift data from GitHub
+        async function refreshData() {
+            employees = (await fetchGithub('employees.json')) || [];
+            shifts = (await fetchGithub('shifts.json')) || {};
+            overtime = (await fetchGithub('overtime.json')) || [];
+            customCards = (await fetchGithub('custom_cards.json')) || [];
+            masterShiftLogs = (await fetchGithub('shift_logs_master.json')) || {}; 
+            manualMetrics = (await fetchGithub('manual_metrics.json')) || {};
+            
+            // Update UI elements dependent on fresh GitHub data
+            const today = new Date();
+            document.getElementById('plannerYear').value = today.getFullYear();
+            document.getElementById('plannerMonth').value = today.getMonth() + 1;
+            document.getElementById('otMonthPicker').value = today.toISOString().slice(0, 7);
+
+            const sel = document.getElementById('otEmpSelect'); 
+            if(sel) sel.innerHTML = '<option value="">Select...</option>' + employees.map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+            
+            initPlannerMatrix(); 
+            renderWeekendTable(); 
+            renderEmpTable(); 
+            renderCustomCards(); 
+            renderManagerLeaderboard(); 
+            
+            const sortedDates = Object.keys(masterShiftLogs).sort((a,b)=>new Date(a)-new Date(b));
+            if(sortedDates.length > 0) {
+                const lastDate = sortedDates[sortedDates.length-1];
+                updateDashboardShiftCards(lastDate, masterShiftLogs[lastDate]);
+            }
+            // Note: init() handles calling render() after CSV data is loaded.
+        }
+
+        // --- Consolidated Initial Data Load ---
+        async function loadAllInitialData() { 
+            document.getElementById('loadingOverlayData').style.display = 'flex';
+            setTimeout(() => { document.getElementById('loadingOverlayData').style.opacity = '1'; }, 10);
+            
+            const startTime = Date.now();
+
+            try { 
+                // 1. Fetch GitHub JSONs (must be awaited before CSV, as render depends on it)
+                await refreshData(); 
+                
+                // 2. Fetch main CSV data
+                // ملاحظة: جلب ملف CSV يستخدم عنوان GitHub مباشر لضمان جلب بيانات الداشبورد الأساسية حتى لو كان Worker URL مخصصًا للملفات الإدارية فقط
+                const res = await fetch('https://raw.githubusercontent.com/realwafix/WH/refs/heads/main/main.csv'); 
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP error! status: ${res.status} when fetching main.csv`);
+                }
+
+                const csv = await res.text(); 
+                
+                await new Promise(resolve => {
+                    Papa.parse(csv, { 
+                        header: true, 
+                        skipEmptyLines: true, 
+                        complete: (res) => { 
+                            rawData = res.data; 
+                            resolve();
+                        } 
+                    });
+                });
+
+                // 3. Enforce minimum display time (1.5s)
+                const elapsedTime = Date.now() - startTime;
+                const remainingTime = 1500 - elapsedTime; 
+                if (remainingTime > 0) {
+                    await new Promise(resolve => setTimeout(resolve, remainingTime));
+                }
+
+                document.getElementById('lastUpdateTxt').innerText = 'Synced'; 
+                
+                // 4. Trigger fade out and init
+                document.getElementById('loadingOverlayData').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loadingOverlayData').style.display = 'none'; 
+                }, 500); 
+                
+                init(true); // Call init to process CSV data and render, passing true for first load
+                startAutoRefresh(); // Start auto-refresh after first successful load
+
+            } catch (error) { 
+                document.getElementById('loadingOverlayData').style.opacity = '0';
+                setTimeout(() => {
+                     document.getElementById('loadingOverlayData').style.display = 'none';
+                }, 500);
+                console.error("Data fetch error:", error);
+                Swal.fire('Error', 'Failed to load core data. Check if main.csv is accessible or if Worker is operational.', 'error');
+            } 
+        }
+        
+        // FIX: Defining init globally - added isFirstLoad flag
+        function init(isFirstLoad = false) { 
+            monthList = [...new Set(rawData.map(d => d.Report_Month))].filter(m => m !== undefined && m !== null && m !== ''); 
+            
+            const monthOrder = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            monthList.sort((a, b) => {
+                const [aYear, aMonth] = a.split('-');
+                const [bYear, bMonth] = b.split('-');
+                if (aYear !== bYear) return parseInt(aYear) - parseInt(bYear);
+                return monthOrder.indexOf(aMonth) - monthOrder.indexOf(bMonth);
+            });
+
+
+            const sel = document.getElementById('monthSelect'); 
+            if(isFirstLoad || sel.options.length === 0) { 
+                const currentSelection = sel.value; // Preserve selection if possible
+                sel.innerHTML = '<option value="ALL_TOTAL">All Time</option>'; 
+                monthList.forEach(m => sel.innerHTML += `<option value="${m}">${m}</option>`); 
+                
+                if(monthList.length > 0) {
+                    sel.value = currentSelection !== "ALL_TOTAL" && monthList.includes(currentSelection) ? currentSelection : monthList[monthList.length - 1]; 
+                } else {
+                    sel.value = "ALL_TOTAL";
+                }
+                sel.onchange = render; 
+                populateManualFormMonth(); 
+            } 
+            render(); 
+        }
+
+        // FIX: Defining render globally
+        function render() {
+            // Clear previous content
+            ['row-orders', 'row-returns', 'storage-grid', 'quality-grid', 'quality-rate-grid', 'inbound-cases-grid', 'inbound-pallets-grid', 'inbound-trucks-grid', 'outbound-cases-grid', 'outbound-pallets-grid', 'outbound-trucks-grid', 'rsd-vertical-cards-grid', 'rsd-grid', 'pod-pending-grid', 'return-pending-grid'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = '';
+            });
+
+            // Destroy existing chart instances before rendering new ones
+            Object.keys(chartInstances).forEach(k => {
+                if (chartInstances[k]) chartInstances[k].destroy();
+                delete chartInstances[k];
+            });
+
+            const currentMonth = document.getElementById('monthSelect').value;
+            const currentMonthIndex = monthList.indexOf(currentMonth);
+            
+            // Current month data (c)
+            const c = currentMonth;
+            // Previous month data (p) - or null if 'ALL_TOTAL' or first month
+            const p = currentMonthIndex > 0 ? monthList[currentMonthIndex - 1] : null;
+
+            // Render Dashboard Sections (FIX: Moved definitions up)
+            renderOverview(c, p);
+            renderStorage(c, p);
+            renderQuality(c, p);
+            renderInbound(c, p);
+            renderOutbound(c, p);
+            renderRSD(c, p);
+            renderPending(c, p);
+            renderMonthlySchedule(c); // Render Monthly Schedule Snapshot
+
+            // Render Custom Cards (which use a simplified version of renderCard)
+            renderCustomCards(c, p);
+
+            // Render All Charts
+            updateAllCharts();
+            
+            // Rerender Shift metrics to reflect latest log/roster if applicable
+            renderShiftMetricsCards();
+        }
+
+
+        function showMainView(id) {
+            document.querySelectorAll('.main-view').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('bg-dark-700', 'text-white'));
+            document.getElementById(`view-${id}`)?.classList.remove('hidden');
+            document.getElementById(`view-${id}`)?.classList.add('active-view');
+            
+            const qNav = document.getElementById('quickNav');
+            const navBtn = document.querySelector(`a[onclick="showMainView('${id}')"]`);
+            if (navBtn) navBtn.classList.add('bg-dark-700', 'text-white');
+
+            if(id==='dashboard') { 
+                render(); 
+                qNav.classList.remove('hidden'); 
+                document.getElementById('pageTitle').textContent = 'Dashboard Overview';
+                updateQuickNav(); // Update nav state immediately on dashboard view
+            } else { 
+                qNav.classList.add('hidden'); 
+                document.getElementById('pageTitle').textContent = 'Workforce Hub';
+                // Ensure Workforce Hub subview is active
+                const activeTab = document.querySelector('.nav-tab.active')?.id.replace('tab-', '');
+                if (activeTab) switchAdminTab(activeTab); else switchAdminTab('roster');
+            }
+        }
+
+        function scrollToId(id) { 
+            const el = document.getElementById(id); 
+            if(el) { 
+                document.getElementById('contentArea').scrollTo({
+                    top: el.offsetTop - 20, // Offset for better visibility
+                    behavior: 'smooth'
+                }); 
+            } 
+            // Update active state immediately
+            document.querySelectorAll('.quick-nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.quick-nav-btn[data-target="${id}"]`)?.classList.add('active');
+        }
+
+        function updateQuickNav() {
+            const contentArea = document.getElementById('contentArea');
+            if (!contentArea) return;
+
+            const sections = [
+                'shift-log-display', 'overview', 'storage', 'quality', 'inbound', 'outbound', 
+                'finance', 'pending', 'monthly-schedule'
+            ];
+            
+            let activeSectionId = null;
+            let minDistance = Infinity;
+            const scrollCenter = contentArea.scrollTop + contentArea.clientHeight / 2;
+
+            sections.forEach(id => {
+                const el = document.getElementById(id);
+                // Only consider sections that are visible
+                if (el && getComputedStyle(el).display !== 'none') {
+                    const elCenter = el.offsetTop + el.offsetHeight / 2;
+                    const distance = Math.abs(elCenter - scrollCenter);
+                    
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        activeSectionId = id;
+                    }
+                }
+            });
+
+            document.querySelectorAll('.quick-nav-btn').forEach(btn => btn.classList.remove('active'));
+            if (activeSectionId) {
+                document.querySelector(`.quick-nav-btn[data-target="${activeSectionId}"]`)?.classList.add('active');
+            }
+        }
+
+        function switchAdminTab(tabId) { 
+            document.querySelectorAll('.sub-view').forEach(el => el.classList.add('hidden')); 
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active')); 
+            document.getElementById(`subview-${tabId}`)?.classList.remove('hidden'); 
+            document.getElementById(`tab-${tabId}`)?.classList.add('active'); 
+            
+            if (tabId === 'planner') {
+                // Ensure planner tool palette is ready
+                setTool(currentTool);
+            }
+            if (tabId === 'data') {
+                loadManualForm(); // Load current manual metric data
+            }
+        }
+        function setTool(t) { 
+            currentTool = t; 
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); 
+            document.querySelector(`button[onclick="setTool('${t}')"]`).classList.add('active'); 
+        }
+        function initPlannerMatrix() {
+            const year = document.getElementById('plannerYear').value; const month = document.getElementById('plannerMonth').value; const daysInMonth = new Date(year, month, 0).getDate(); const table = document.getElementById('planner-matrix');
+            let html = `<thead><tr><th class="matrix-th" style="width:150px; left:0; z-index:20;">EMPLOYEE</th>`;
+            for(let i=1; i<=daysInMonth; i++) { const d = new Date(year, month-1, i); const isWeekend = d.getDay()===5 || d.getDay()===6; html += `<th class="matrix-th ${isWeekend?'text-orange-400':''}">${i}<br><span class="text-[9px]">${d.toLocaleDateString('en-US',{weekday:'narrow'})}</span></th>`; }
+            
+            // Only add Actions column for Admin
+            const actionHeader = (currentUser && currentUser.role === 'admin') ? `<th class="matrix-th" style="right:0; z-index:20; width:120px;">Actions</th>` : '';
+            html += `${actionHeader}</tr></thead><tbody onmouseleave="isPainting=false">`;
+            
+            employees.forEach(emp => { 
+                html += `<tr><td class="matrix-td-name">${emp.name}</td>`; 
+                for(let i=1; i<=daysInMonth; i++) { 
+                    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(i).padStart(2,'0')}`; const dObj = new Date(year, month-1, i); const isWeekend = dObj.getDay()===5 || dObj.getDay()===6; let cls = isWeekend ? 'cell-weekend' : ''; let char = ''; 
+                    if(shifts[dateStr]) { if(shifts[dateStr].morning && shifts[dateStr].morning.includes(emp.name)) { cls='cell-m'; char='M'; } else if(shifts[dateStr].evening && shifts[dateStr].evening.includes(emp.name)) { cls='cell-e'; char='E'; } else if(shifts[dateStr].night && shifts[dateStr].night.includes(emp.name)) { cls='cell-n'; char='N'; } } 
+                    // Interaction only for Admin
+                    const interactions = (currentUser && currentUser.role === 'admin') ? `onmousedown="startPaint(this)" onmouseover="paint(this)" onmouseup="stopPaint()"` : '';
+                    html += `<td class="matrix-cell ${cls}" data-date="${dateStr}" data-emp="${emp.name}" data-weekend="${isWeekend}" ${interactions}>${char}</td>`; 
+                } 
+                if(currentUser && currentUser.role === 'admin') {
+                    html += `<td class="matrix-td-action"><div class="flex gap-1 justify-center"><button onclick="fillMonth('${emp.name}', 'morning')" class="text-[10px] bg-yellow-400 text-black w-5 h-5 rounded font-bold hover:scale-110" title="Fill Morning">M</button><button onclick="fillMonth('${emp.name}', 'evening')" class="text-[10px] bg-blue-400 text-black w-5 h-5 rounded font-bold hover:scale-110" title="Fill Evening">E</button><button onclick="fillMonth('${emp.name}', 'night')" class="text-[10px] bg-red-400 text-black w-5 h-5 rounded font-bold hover:scale-110" title="Fill Night">N</button><button onclick="fillMonth('${emp.name}', 'clear')" class="text-[10px] bg-slate-600 text-white w-5 h-5 rounded font-bold hover:scale-110" title="Clear Month"><i class="fas fa-times"></i></button></div></td>`;
+                }
+                html += `</tr>`; 
+            });
+            table.innerHTML = html + `</tbody>`;
+            
+            // Add tool palette container (only visible to admin/manager)
+            if(currentUser && (currentUser.role === 'admin' || currentUser.role === 'manager')) {
+                const toolPalette = document.createElement('div');
+                toolPalette.className = 'flex gap-2 p-3 bg-dark-800 rounded-xl shadow-lg mt-4';
+                toolPalette.innerHTML = `
+                    <button onclick="setTool('morning')" class="tool-btn bg-yellow-400 text-black p-3 rounded-xl font-bold text-sm active" title="Morning Shift">Morning</button>
+                    <button onclick="setTool('evening')" class="tool-btn bg-blue-400 text-black p-3 rounded-xl font-bold text-sm" title="Evening Shift">Evening</button>
+                    <button onclick="setTool('night')" class="tool-btn bg-red-400 text-black p-3 rounded-xl font-bold text-sm" title="Night Shift">Night</button>
+                    <button onclick="setTool('clear')" class="tool-btn bg-slate-600 text-white p-3 rounded-xl font-bold text-sm" title="Clear Shift">Clear</button>
+                `;
+                const plannerDiv = document.getElementById('subview-planner');
+                const existingPalette = plannerDiv.querySelector('.tool-palette');
+                if (existingPalette) existingPalette.remove();
+                plannerDiv.insertBefore(toolPalette, plannerDiv.querySelector('.matrix-wrapper'));
+            }
+        }
+        function startPaint(cell) { if(currentUser.role !== 'admin') return; isPainting = true; applyShift(cell); } function stopPaint() { isPainting = false; } function paint(cell) { if(isPainting) applyShift(cell); }
+        function applyShift(cell) { if(cell.dataset.weekend === 'true' || currentUser.role !== 'admin') return; const date = cell.dataset.date; const emp = cell.dataset.emp; updateShiftData(date, emp, currentTool); cell.className = 'matrix-cell'; cell.innerText = ''; if(currentTool !== 'clear') { cell.classList.add(currentTool === 'morning' ? 'cell-m' : (currentTool === 'evening' ? 'cell-e' : 'cell-n')); cell.innerText = currentTool.charAt(0).toUpperCase(); } }
+        function updateShiftData(date, emp, shiftType) { if(!shifts[date]) shifts[date] = { morning:[], evening:[], night:[] }; shifts[date].morning = shifts[date].morning.filter(n => n !== emp); shifts[date].evening = shifts[date].evening.filter(n => n !== emp); shifts[date].night = shifts[date].night.filter(n => n !== emp); if(shiftType !== 'clear') shifts[date][shiftType].push(emp); }
+        function fillMonth(empName, shiftType) { const year = document.getElementById('plannerYear').value; const month = document.getElementById('plannerMonth').value; const daysInMonth = new Date(year, month, 0).getDate(); for(let i=1; i<=daysInMonth; i++) { const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(i).padStart(2,'0')}`; const dObj = new Date(year, month-1, i); if(dObj.getDay() === 5 || dObj.getDay() === 6) continue; updateShiftData(dateStr, empName, shiftType); } initPlannerMatrix(); Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Updated ${empName} to ${shiftType}`, showConfirmButton: false, timer: 1500 }); }
+        async function savePlanner() { await saveGithub('shifts.json', shifts); Swal.fire('Saved', 'Monthly roster updated successfully.', 'success'); }
+        
+        // --- Export to Excel Function ---
+        function exportTableToExcel(tableID, filename = ''){
+            const tab_text = document.getElementById(tableID).outerHTML;
+            
+            let month, year;
+            if (tableID === 'planner-matrix') {
+                month = document.getElementById('plannerMonth').options[document.getElementById('plannerMonth').selectedIndex].text;
+                year = document.getElementById('plannerYear').value;
+            } else if (tableID === 'dashboard-monthly-preview') {
+                // For monthly snapshot, we use the selected month in the dashboard control
+                const monthSelect = document.getElementById('monthSelect').value;
+                if (monthSelect !== 'ALL_TOTAL') {
+                    [year, month] = monthSelect.split('-'); // Assuming format YY-MON
+                    year = '20' + year; // Convert YY to YYYY
+                } else {
+                    month = 'All';
+                    year = new Date().getFullYear();
+                }
+            } else {
+                month = new Date().toLocaleString('en-US', { month: 'short' });
+                year = new Date().getFullYear();
+            }
+
+            filename = filename + month + "_" + year + ".xls";
+            
+            const ua = window.navigator.userAgent;
+            const msie = ua.indexOf("MSIE ");
+            
+            // Create a link to the file and trigger download
+            const downloadLink = document.createElement("a");
+            document.body.appendChild(downloadLink);
+            
+            // Create a Blob from the table HTML content with correct MIME type for Excel
+            const blob = new Blob([`\ufeff${tab_text}`], { type: 'application/vnd.ms-excel;charset=utf-8' });
+
+            // Create object URL and set attributes
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = filename;
+            
+            // Trigger download
+            downloadLink.click();
+            
+            document.body.removeChild(downloadLink);
+            
+            Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Exported to ${filename}`, showConfirmButton: false, timer: 2000 });
+        }
+
+        function copyTableToClipboard(elementId) { 
+            const el = document.getElementById(elementId); 
+            if(!el) return; 
+
+            const tempDiv = document.createElement('div');
+            // Check if it's the planner matrix and generate the email-ready table for copying
+            if (elementId === 'planner-matrix') {
+                tempDiv.innerHTML = generateEmailReadyPlannerTable();
+            } else {
+                tempDiv.appendChild(el.cloneNode(true));
+            }
+            
+            document.body.appendChild(tempDiv);
+            const range = document.createRange(); 
+            range.selectNode(tempDiv); 
+            window.getSelection().removeAllRanges(); 
+            window.getSelection().addRange(range); 
+            
+            try { 
+                document.execCommand('copy'); 
+                Swal.fire('Copied', 'Table data copied to clipboard (Email Ready)', 'success'); 
+            } catch(e) { 
+                Swal.fire('Error', 'Copy failed.', 'error'); 
+            } 
+            
+            window.getSelection().removeAllRanges(); 
+            document.body.removeChild(tempDiv);
+        }
+
+        function generateEmailReadyPlannerTable() {
+            const year = document.getElementById('plannerYear').value;
+            const month = document.getElementById('plannerMonth').value;
+            const monthName = document.getElementById('plannerMonth').options[document.getElementById('plannerMonth').selectedIndex].text;
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const table = document.getElementById('planner-matrix');
+            
+            let html = `<table class="email-table-out" border="1" style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; text-align: center;">`;
+            
+            // Title Row
+            html += `<thead><tr><th colspan="${daysInMonth + 1}" style="background-color: #f4b084; color: black; font-weight: bold; padding: 8px; border: 1px solid #000;">MONTHLY SHIFT SCHEDULE - ${monthName.toUpperCase()} ${year}</th></tr>`;
+
+            // Header Row (Days)
+            html += `<tr style="background-color: #e7e6e6;">`;
+            html += `<th style="background-color: #f4b084; color: black; padding: 6px; border: 1px solid #000; width: 120px; text-align: left;">Name</th>`;
+            for(let i=1; i<=daysInMonth; i++) { 
+                const d = new Date(year, month-1, i); 
+                const isWeekend = d.getDay()===5 || d.getDay()===6;
+                const dayName = d.toLocaleDateString('en-US',{weekday:'narrow'});
+                html += `<th style="padding: 6px; border: 1px solid #000; ${isWeekend ? 'background-color: #cccccc;' : ''}">${i} (${dayName})</th>`; 
+            }
+            html += `</tr></thead><tbody>`;
+
+            // Data Rows
+            employees.forEach(emp => { 
+                html += `<tr><td style="border: 1px solid #000; padding: 4px; text-align: left; font-weight: bold; background: #eee;">${emp.name}</td>`; 
+                for(let i=1; i<=daysInMonth; i++) { 
+                    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(i).padStart(2,'0')}`; 
+                    const dObj = new Date(year, month-1, i); 
+                    const isWeekend = dObj.getDay()===5 || dObj.getDay()===6; 
+                    let cls = ''; 
+                    let char = ''; 
+                    
+                    if(shifts[dateStr]) { 
+                        if(shifts[dateStr].morning && shifts[dateStr].morning.includes(emp.name)) { cls='email-m'; char='M'; } 
+                        else if(shifts[dateStr].evening && shifts[dateStr].evening.includes(emp.name)) { cls='email-e'; char='E'; } 
+                        else if(shifts[dateStr].night && shifts[dateStr].night.includes(emp.name)) { cls='email-n'; char='N'; } 
+                    } 
+                    
+                    html += `<td class="email-td ${cls}" style="border: 1px solid #000; padding: 4px; height: 20px; ${cls ? '' : 'background-color: white;'}">${char}</td>`; 
+                } 
+                html += `</tr>`; 
+            });
+            html += `</tbody></table>`;
+            return html;
+        }
+        
+        function renderWeekendTable() { const month = document.getElementById('otMonthPicker').value; if(!month) return; const filtered = overtime.filter(o => o.date.startsWith(month)).sort((a,b)=>new Date(a.date)-new Date(b.date)); const grouped = {}; filtered.forEach(o=>{ if(!grouped[o.date]) grouped[o.date]=[]; grouped[o.date].push(o); }); let html = `<table class="email-table-out" border="1" style="width:100%">`; Object.keys(grouped).forEach(d => { const dayName = new Date(d).toLocaleDateString('en-US', {weekday:'long'}); const dateFmt = new Date(d).toLocaleDateString('en-GB'); const items = grouped[d]; html += `<tr><td colspan="4" class="email-th" style="background:#f4b084">${dayName} - ${dateFmt}</td></tr>`; html += `<tr style="background:#e7e6e6"><td class="email-td"><b>Name</b></td><td class="email-td"><b>From</b></td><td class="email-td"><b>To</b></td><td class="email-td"><b>Hours</b></td></tr>`; items.forEach(i => { html += `<tr><td class="email-td">${i.name}</td><td class="email-td">${i.from}</td><td class="email-td">${i.to}</td><td class="email-td">${i.hours}</td></tr>`; }); }); html += `</table>`; document.getElementById('weekend-table-preview').innerHTML = html || '<p class="text-center text-gray-500 mt-4">No overtime found for this month.</p>'; }
+        async function addOvertime() { const name = document.getElementById('otEmpSelect').value; const date = document.getElementById('otDate').value; const from = document.getElementById('otTimeFrom').value; const to = document.getElementById('otTimeTo').value; if(!name || !date || !from || !to) return Swal.fire('Error', 'Fill all fields', 'warning'); const d1 = new Date(`2000-01-01T${from}`); const d2 = new Date(`2000-01-01T${to}`); let hours = (d2 - d1) / 36e5; if(hours < 0) hours += 24; overtime.push({ id: Date.now(), name, date, from, to, hours: parseFloat(hours.toFixed(1)) }); await saveGithub('overtime.json', overtime); renderWeekendTable(); }
+
+        function handleShiftLogUpload(input) { const file = input.files[0]; if(!file) return; Papa.parse(file, { complete: async function(results) { const data = results.data; let newEntriesCount = 0; data.forEach((row, i) => { if(i === 0 || row.length < 8) return; const dateRaw = row[0]; if(!dateRaw) return; const parts = dateRaw.split('/'); // Assuming DD/MM/YY format from context const isoDate = `20${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`; if(!masterShiftLogs[isoDate]) masterShiftLogs[isoDate] = { morning:null, evening:null, night:null, displayDate: dateRaw }; const shiftRaw = row[1].toLowerCase().replace(/\s/g, ''); let key = 'morning'; if(shiftRaw.includes('second') || shiftRaw.includes('even')) key = 'evening'; if(shiftRaw.includes('third') || shiftRaw.includes('night')) key = 'night'; 
+            // Basic validation and parsing for numbers
+            const parseVal = (val) => parseNum(val) || 0;
+            masterShiftLogs[isoDate][key] = { rec: parseVal(row[2]), disp: parseVal(row[3]), std: parseVal(row[4]), trucksPlan: parseVal(row[5]), trucksRec: parseVal(row[6]), trucksDisp: parseVal(row[7]) }; 
+            newEntriesCount++; }); 
+            
+            await saveGithub('shift_logs_master.json', masterShiftLogs); 
+            
+            const dates = Object.keys(masterShiftLogs).sort((a,b)=>new Date(a)-new Date(b)); 
+            if(dates.length > 0) { 
+                const lastDate = dates[dates.length-1]; 
+                updateDashboardShiftCards(lastDate, masterShiftLogs[lastDate]); 
+            } 
+            
+            updateAllCharts(); 
+            Swal.fire('Success', `Imported ${newEntriesCount} log entries.`, 'success'); 
+            input.value = ''; 
+        } }); }
+        
+        function updateDashboardShiftCards(isoDate, data) { 
+            const displayDate = data.displayDate || isoDate; 
+            document.getElementById('shift-log-display').classList.remove('hidden'); 
+            document.getElementById('shift-log-date').textContent = displayDate; 
+            const roster = shifts[isoDate] || { morning:[], evening:[], night:[] }; 
+            
+            const renderStats = (d) => { 
+                if(!d) return '<p class="italic opacity-50">No Data</p>'; 
+                return `
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                            <span class="block text-xs opacity-60 font-bold">PALLETS</span>
+                            <div class="flex justify-between text-xs"><span>Rec:</span><span class="font-bold num-font">${formatNum(d.rec, 0)}</span></div>
+                            <div class="flex justify-between text-xs"><span>Disp:</span><span class="font-bold num-font">${formatNum(d.disp, 0)}</span></div>
+                        </div>
+                        <div>
+                            <span class="block text-xs opacity-60 font-bold">TRUCKS</span>
+                            <div class="flex justify-between text-xs"><span>Plan:</span><span class="font-bold num-font">${formatNum(d.trucksPlan, 0)}</span></div>
+                            <div class="flex justify-between text-xs"><span>Act:</span><span class="font-bold num-font">${formatNum(d.trucksRec, 0)}</span></div>
+                        </div>
+                    </div>
+                `; 
+            }; 
+            
+            const renderStaff = (list) => list.map(n => `<div>${n}</div>`).join('') || '<div class="text-xs italic opacity-50">No staff assigned</div>';
+
+            document.getElementById('card-stats-morning').innerHTML = renderStats(data.morning); 
+            document.getElementById('card-staff-morning').innerHTML = renderStaff(roster.morning);
+            document.getElementById('card-stats-evening').innerHTML = renderStats(data.evening); 
+            document.getElementById('card-staff-evening').innerHTML = renderStaff(roster.evening); 
+            document.getElementById('card-stats-night').innerHTML = renderStats(data.night); 
+            document.getElementById('card-staff-night').innerHTML = renderStaff(roster.night);
+        }
+        
+        // --- NEW FUNCTION: Process Shift Data for Dashboard ---
+        function processShiftDataForDashboard() {
+            // Get all unique dates where log data exists
+            const allDates = Object.keys(masterShiftLogs);
+            // Sort by date (ascending) and take the last 7 unique days
+            const sortedDates = allDates.sort((a,b) => new Date(a) - new Date(b)).slice(-7); 
+            
+            const data = [];
+            const metrics = {
+                'rec': { label: 'Received (Pallets)', icon: 'fas fa-box-open', color: 'green' },
+                'disp': { label: 'Dispatched (Pallets)', icon: 'fas fa-dolly-flatbed', color: 'blue' },
+                'std': { label: 'Standard Time (Min)', icon: 'fas fa-clock', color: 'purple' },
+                'trucksPlan': { label: 'Planned Trucks', icon: 'fas fa-truck-loading', color: 'yellow' },
+                'trucksRec': { label: 'Received Trucks', icon: 'fas fa-truck-moving', color: 'orange' },
+                'trucksDisp': { label: 'Dispatched Trucks', icon: 'fas fa-shipping-fast', color: 'red' }
+            };
+
+            sortedDates.forEach(date => {
+                ['morning', 'evening', 'night'].forEach(shiftKey => {
+                    const shiftData = masterShiftLogs[date][shiftKey];
+                    if (shiftData) {
+                        Object.keys(metrics).forEach(metricKey => {
+                            // Ensure data parsing is robust
+                            const value = parseFloat(shiftData[metricKey]);
+                            if (!isNaN(value)) {
+                                data.push({
+                                    date: new Date(date),
+                                    shift: shiftKey.charAt(0).toUpperCase() + shiftKey.slice(1),
+                                    value: value,
+                                    label: metrics[metricKey].label,
+                                    icon: metrics[metricKey].icon,
+                                    color: metrics[metricKey].color,
+                                    metricKey: metricKey,
+                                    isoDate: date
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+            return data;
+        }
+
+        // --- NEW FUNCTION: Render Shift Metrics Cards ---
+        function renderShiftMetricsCards() {
+            const shiftData = processShiftDataForDashboard();
+            const container = document.getElementById('shift-metrics-grid');
+            if (!container) return;
+
+            let html = '';
+            
+            // Group data by Date and Shift for display
+            const groupedByDate = {};
+            shiftData.forEach(d => {
+                const dateStr = d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', weekday: 'short' });
+                const key = `${dateStr}_${d.shift}`;
+                if (!groupedByDate[key]) groupedByDate[key] = { date: dateStr, shift: d.shift, metrics: [], isoDate: d.isoDate };
+                groupedByDate[key].metrics.push(d);
+            });
+
+            // Flatten and sort the structure for card rendering (showing one card per Shift per Day, newest first)
+            const cardData = Object.values(groupedByDate).sort((a, b) => {
+                // Sorting based on ISO date
+                const dateA = a.isoDate;
+                const dateB = b.isoDate;
+                if (dateA > dateB) return -1;
+                if (dateA < dateB) return 1;
+                return 0;
+            });
+
+            cardData.slice(0, 6).forEach(card => {
+                let shiftColor, shiftIcon;
+                
+                if (card.shift === 'Morning') {
+                    shiftColor = 'yellow';
+                    shiftIcon = 'fas fa-sun';
+                } else if (card.shift === 'Evening') {
+                    shiftColor = 'blue';
+                    shiftIcon = 'fas fa-moon';
+                } else if (card.shift === 'Night') {
+                    shiftColor = 'red';
+                    shiftIcon = 'fas fa-star';
+                }
+                
+                const metricDisplay = card.metrics.filter(m => ['rec', 'disp', 'trucksRec'].includes(m.metricKey)).map(m => 
+                    `<div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400">${m.label.split('(')[0].trim()}</span>
+                        <span class="font-bold text-white num-font">${formatNum(m.value, 0)}</span>
+                    </div>`
+                ).join('');
+
+                const dateParts = card.date.split(' '); // [DayName, Day, Month]
+                const displayDate = `${dateParts[0]} ${dateParts[1]} ${dateParts[2]}`; // E.g., "Mon 10 Nov"
+                
+                html += `
+                    <div class="shift-metric-card border-t-4 border-${shiftColor}-500 flex flex-col justify-between h-full">
+                        <div class="flex justify-between items-center mb-2">
+                            <p class="text-[10px] font-bold uppercase text-slate-500">${displayDate}</p>
+                            <i class="${shiftIcon} text-${shiftColor}-400"></i>
+                        </div>
+                        <h5 class="text-lg font-extrabold text-white mb-3">${card.shift} Shift</h5>
+                        
+                        <div class="space-y-1 mt-2">
+                            ${metricDisplay}
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html || '<p class="text-slate-500 italic">No shift log data available.</p>';
+        }
+
+        // --- NEW FUNCTION: Render Dynamic Shift Chart ---
+        function renderDynamicShiftChart(canvasId, chartType, isPresentation = false) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            
+            const targetInstances = isPresentation ? window.clonedChartInstances : chartInstances;
+
+            if (targetInstances && targetInstances[canvasId]) {
+                 targetInstances[canvasId].destroy();
+                 delete targetInstances[canvasId];
+            }
+
+            const allData = processShiftDataForDashboard();
+            let config = null;
+            let labels;
+            let datasets = [];
+
+            if (chartType.endsWith('Trend')) {
+                const dataKey = chartType.includes('Rec') ? 'rec' : (chartType.includes('Disp') ? 'disp' : 'trucksRec');
+                const title = chartType.includes('Rec') ? 'Received' : (chartType.includes('Disp') ? 'Dispatched' : 'Trucks Received');
+                const color = chartType.includes('Rec') ? '#10b981' : (chartType.includes('Disp') ? '#60a5fa' : '#f97316');
+
+                const dailySums = {};
+                allData.filter(d => d.metricKey === dataKey).forEach(d => {
+                    const dateStr = d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    dailySums[dateStr] = (dailySums[dateStr] || 0) + d.value;
+                });
+
+                labels = Object.keys(dailySums).sort((a, b) => new Date(a) - new Date(b));
+                const dataValues = labels.map(label => dailySums[label]);
+
+                datasets.push({
+                    label: title,
+                    data: dataValues,
+                    borderColor: color,
+                    backgroundColor: color + '30',
+                    fill: true,
+                    tension: 0.4,
+                });
+                
+                config = { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { beginAtZero: true } } } };
+
+            } else if (chartType.endsWith('Shift')) {
+                const dataKey = chartType.includes('Rec') ? 'rec' : (chartType.includes('Disp') ? 'disp' : 'trucksRec');
+                const title = chartType.includes('Rec') ? 'Received' : (chartType.includes('Disp') ? 'Dispatched' : 'Trucks Handled');
+                const color = chartType.includes('Rec') ? '#10b981' : (chartType.includes('Disp') ? '#60a5fa' : '#f97316');
+
+                const shiftTotals = { Morning: 0, Evening: 0, Night: 0 };
+                allData.filter(d => d.metricKey === dataKey).forEach(d => {
+                    shiftTotals[d.shift] += d.value;
+                });
+
+                labels = ['Morning', 'Evening', 'Night'];
+                const dataValues = labels.map(label => shiftTotals[label]);
+
+                datasets.push({
+                    label: title,
+                    data: dataValues,
+                    backgroundColor: ['#facc15', '#60a5fa', '#f87171'],
+                    borderRadius: 4,
+                });
+
+                config = { type: 'bar', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }, plugins: { legend: { display: false } } } };
+            } else if (chartType === 'shiftTrend') {
+                return renderShiftTrendChart(canvasId, isPresentation);
+            }
+
+            if (config) {
+                 const newChart = new Chart(ctx, config);
+                 targetInstances[canvasId] = newChart;
+                 return newChart;
+            }
+        }
+        
+        function updateAllCharts() { 
+            // 1. Destroy existing dashboard instances
+            Object.keys(chartInstances).forEach(k => {
+                if (chartInstances[k]) chartInstances[k].destroy();
+                delete chartInstances[k];
+            });
+             // 2. Destroy existing sparkline instances
+            Object.keys(sparklineInstances).forEach(k => {
+                if (sparklineInstances[k]) sparklineInstances[k].destroy();
+                delete sparklineInstances[k];
+            });
+            
+            // 3. Re-render all main charts (Dashboard Mode)
+            Object.keys(CHART_TYPE_MAP).forEach(id => {
+                // Determine if it is a Shift Chart or a general Dashboard Chart
+                if (id.startsWith('chart-shift-')) {
+                    renderDynamicShiftChart(id, CHART_TYPE_MAP[id].type);
+                } else if (CHART_TYPE_MAP[id]) {
+                    renderChart(id, CHART_TYPE_MAP[id]);
+                }
+            });
+            renderShiftMetricsCards(); // Re-render the new shift metric cards
+        }
+        
+        // --- Utility Functions ---
+
+        function parseNum(val) {
+            if (typeof val === 'number') return val;
+            if (typeof val === 'string') {
+                const cleaned = val.replace(/,/g, '').trim();
+                return parseFloat(cleaned) || 0;
+            }
+            return 0;
+        }
+
+        function formatNum(num, decimals = 1) {
+            if (num === null || num === undefined) return '-';
+            num = parseNum(num);
+            if (Math.abs(num) >= 1000000) return (num / 1000000).toFixed(decimals) + 'M';
+            if (Math.abs(num) >= 1000) return (num / 1000).toFixed(decimals) + 'K';
+            return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: decimals });
+        }
+
+        // Get Metric value for a specific month (m), warehouse (wh), and column (col)
+        function getMetric(m, wh, col, isPercentage = false) {
+            if (col === 'Capacity' || col === 'Utalized' || col === 'SAP' || col === 'RSD' || col === 'POD pending' || col === 'Return pending') {
+                const metricKey = {
+                    'Capacity': 'cap', 'Utalized': 'used', 'SAP': 'sap', 'RSD': 'rsd', 'POD pending': 'pod', 'Return pending': 'ret'
+                }[col];
+                
+                const val = (manualMetrics[m] && manualMetrics[m][wh] && manualMetrics[m][wh][metricKey]) 
+                            ? manualMetrics[m][wh][metricKey] 
+                            : rawData.find(d => d.Report_Month === m && d.Warehouse === wh)?.[col];
+
+                return parseNum(val) || 0;
+            }
+
+            const data = rawData.find(d => d.Report_Month === m && d.Warehouse === wh);
+            let value = parseNum(data?.[col]) || 0;
+            
+            if (isPercentage) {
+                // Quality metrics are stored as numbers but should be treated as % (e.g., 99.5 is 99.5%)
+                return value;
+            }
+            return value;
+        }
+
+        // Calculate difference (current - previous)
+        function calcDiff(current, previous) {
+            current = parseNum(current);
+            previous = parseNum(previous);
+            if (previous === 0) return current > 0 ? 100 : 0; // Huge positive change if coming from 0
+            return ((current - previous) / previous) * 100;
+        }
+
+        // Get historical trend data for sparkline (last 6 months, including current)
+        function getTrend(wh, col) {
+            const curIdx = monthList.indexOf(document.getElementById('monthSelect').value);
+            const trendMonths = monthList.slice(Math.max(0, curIdx - 5), curIdx + 1);
+            return trendMonths.map(m => getMetric(m, wh, col));
+        }
+
+        // Get historical data for charts
+        function getLast3Months(wh, col) {
+            const curIdx = monthList.indexOf(document.getElementById('monthSelect').value);
+            const historyMonths = monthList.slice(Math.max(0, curIdx - 2), curIdx + 1);
+            return historyMonths.map(m => ({ month: m, value: getMetric(m, wh, col) }));
+        }
+
+        // --- Card Generation Functions ---
+
+        function createCard(containerId, wh, value, unit, diff, trendData, color, sparklineHistory) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const diffColor = diff >= 0 ? 'text-green-400' : 'text-red-400';
+            const diffIcon = diff >= 0 ? 'fas fa-arrow-up' : 'fas fa-arrow-down';
+            
+            const cardHtml = `
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-${color}-500">
+                    <h4 class="text-slate-400 text-xs font-bold uppercase tracking-widest">${wh}</h4>
+                    <div class="flex items-end justify-between mt-1">
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-3xl font-bold text-white num-font">${value}</span>
+                            <span class="text-xs text-slate-500">${unit}</span>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs ${diffColor} font-bold"><i class="${diffIcon} mr-1"></i> ${formatNum(Math.abs(diff), 1)}%</p>
+                            <span class="text-[10px] text-slate-500">vs Prev Month</span>
+                        </div>
+                    </div>
+                    <div class="sparkline-container"><canvas id="sparkline-${containerId}-${wh}"></canvas></div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', cardHtml);
+
+            // Initialize Sparkline
+            setTimeout(() => {
+                const canvasId = `sparkline-${containerId}-${wh}`;
+                const ctx = document.getElementById(canvasId);
+                if (ctx) {
+                    if (sparklineInstances[canvasId]) sparklineInstances[canvasId].destroy();
+                    sparklineInstances[canvasId] = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: trendData.map((_, i) => i + 1),
+                            datasets: [{
+                                data: trendData,
+                                borderColor: `${color}-500`,
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                            scales: { x: { display: false }, y: { display: false } },
+                            layout: { padding: { top: 5, bottom: 5, left: 5, right: 5 } }
+                        }
+                    });
+                }
+            }, 0);
+        }
+
+        function createQualityRateCard(containerId, wh, type, rate, color, historyData) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            const historyList = historyData.slice(-3).map(d => 
+                `<p class="text-[10px] text-slate-400 font-mono">${d.month}: <span class="text-white font-bold">${d.value.toFixed(1)}%</span></p>`
+            ).join('');
+
+            const cardHtml = `
+                <div class="glass-card p-6 rounded-2xl border-l-4 border-${color.split('-')[0]}-500 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-slate-400 text-xs font-bold uppercase tracking-widest">${wh} ${type} Rate</h4>
+                        <div class="flex items-baseline gap-2 mt-2">
+                            <span class="text-4xl font-extrabold text-white num-font">${rate.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-slate-500 font-bold mb-1">Last 3 Months %</p>
+                        ${historyList}
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', cardHtml);
+        }
+
+        function createVerticalCard(containerId, wh, matchRate, sapValue, history, color) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            const totalSAP = history.reduce((sum, d) => sum + parseNum(d.value), 0);
+            const avgSAP = totalSAP / history.length;
+            
+            const cardHtml = `
+                <div class="shift-metric-card border-t-4 border-yellow-500 flex flex-col justify-between h-full">
+                    <div class="flex justify-between items-center mb-2">
+                        <p class="text-[10px] font-bold uppercase text-slate-500">${wh} - Reconciliation</p>
+                        <i class="fas fa-coins text-yellow-400"></i>
+                    </div>
+                    <h5 class="text-lg font-extrabold text-white mb-3">Match Rate</h5>
+                    
+                    <div class="mb-4">
+                        <span class="text-3xl font-bold text-white num-font">${matchRate}%</span>
+                        <p class="text-xs text-slate-400">Current SAP: ${formatNum(sapValue, 0)}</p>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">3-Month Avg SAP</span>
+                            <span class="font-bold text-white num-font">${formatNum(avgSAP, 0)}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-400">Last Month SAP (${history[1]?.month || '--'})</span>
+                            <span class="font-bold text-white num-font">${formatNum(history[1]?.value, 0)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', cardHtml);
+        }
+
+        // --- Chart Configs (Missing ones) ---
+
+        function renderShiftTrendChart(canvasId, isPresentation = false) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+
+            const targetInstances = isPresentation ? window.clonedChartInstances : chartInstances;
+
+            if (targetInstances && targetInstances[canvasId]) {
+                 targetInstances[canvasId].destroy();
+                 delete targetInstances[canvasId];
+            }
+
+            const allData = processShiftDataForDashboard();
+            const dailyData = {};
+
+            allData.forEach(d => {
+                const dateStr = d.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                if (!dailyData[dateStr]) dailyData[dateStr] = { rec: 0, disp: 0 };
+                
+                if (d.metricKey === 'rec') dailyData[dateStr].rec += d.value;
+                if (d.metricKey === 'disp') dailyData[dateStr].disp += d.value;
+            });
+
+            const labels = Object.keys(dailyData).sort((a, b) => new Date(a) - new Date(b));
+            const recData = labels.map(label => dailyData[label].rec);
+            const dispData = labels.map(label => dailyData[label].disp);
+
+            const config = {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Received (Pallets)', data: recData, borderColor: '#10b981', backgroundColor: '#10b98120', fill: true, tension: 0.4, yAxisID: 'y' },
+                        { label: 'Dispatched (Pallets)', data: dispData, borderColor: '#60a5fa', backgroundColor: '#60a5fa20', fill: true, tension: 0.4, yAxisID: 'y' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false } }, 
+                        y: { beginAtZero: true, grid: { color: '#1e293b' } }
+                    }
+                }
+            };
+
+            const newChart = new Chart(ctx, config);
+            targetInstances[canvasId] = newChart;
+            return newChart;
+        }
+
+        // --- Chart Generation Helpers ---
+        function getBarConfig(col) { return { type: 'bar', data: { labels: monthList, datasets: WH_ORDER.map(wh => ({ label: wh, data: monthList.map(m => getMetric(m, wh, col)), backgroundColor: CHART_COLORS[wh] })) }, options: { responsive: true, maintainAspectRatio: false, scales: {x:{stacked:true, grid: { color: '#1e293b' }}, y:{stacked:true, grid: { color: '#1e293b' }}} } }; }
+        function getLineConfig(col) { return { type: 'line', data: { labels: monthList, datasets: WH_ORDER.map(wh => ({ label: wh, data: monthList.map(m => getMetric(m, wh, col)), borderColor: CHART_COLORS[wh], fill: false, tension: 0.3 })) }, options: { responsive: true, maintainAspectRatio: false, scales: {x:{grid: { display: false }}, y:{grid: { color: '#1e293b' }}} } }; }
+        function getDoughnutConfig(col) { const cur = document.getElementById('monthSelect').value; const totals = WH_ORDER.map(w => getMetric(cur, w, col)); return { type: 'doughnut', data: { labels: WH_ORDER, datasets: [{ data: totals, backgroundColor: ['#60a5fa', '#34d399', '#fb923c'] }] }, options: { responsive: true, maintainAspectRatio: false } }; }
+        function getGroupedBarConfig(cols) { const cur = document.getElementById('monthSelect').value; const datasets = cols.map((col, idx) => ({ label: col, data: WH_ORDER.map(w => getMetric(cur, w, col, true)), backgroundColor: idx===0?'#60a5fa':'#34d399' })); return { type: 'bar', data: { labels: WH_ORDER, datasets }, options: { responsive: true, maintainAspectRatio: false, scales: {y:{ticks:{callback:v=>v+'%'}}} } }; }
+        function getQualityTrendChart() {
+            const mockDamageData = monthList.map(m => {
+                const totalOrders = getMetric(m, WH_ORDER[0], 'Orders/Month');
+                const accuracy = getMetric(m, WH_ORDER[0], 'Order Accuracy', true);
+                const mockDamages = totalOrders * (100 - accuracy) / 1000;
+                return totalOrders > 0 ? (mockDamages / totalOrders) * 100 : 0;
+            });
+            return {
+                type: 'line',
+                data: {
+                    labels: monthList,
+                    datasets: [
+                        { label: 'Return Rate %', data: monthList.map(m => { const orders = getMetric(m, WH_ORDER[0], 'Orders/Month'); const returns = getMetric(m, WH_ORDER[0], 'Returns'); return orders > 0 ? (returns / orders) * 100 : 0; }), borderColor: '#f87171', backgroundColor: '#f8717120', fill: true, tension: 0.4 },
+                        { label: 'Damage Rate % (Mock)', data: mockDamageData, borderColor: '#fb923c', backgroundColor: '#fb923c20', fill: true, tension: 0.4 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 10, ticks: { callback: (v) => v + '%' }, grid: { color: '#1e293b' } }, x: { grid: { display: false } } } }
+            };
+        }
+        function getFinanceReconChart() {
+            return {
+                type: 'bar',
+                data: {
+                    labels: monthList,
+                    datasets: [
+                        { label: 'SAP Value', data: monthList.map(m => getMetric(m, WH_ORDER[0], 'SAP')), backgroundColor: CHART_COLORS.SPIMACO },
+                        { label: 'RSD Value', data: monthList.map(m => getMetric(m, WH_ORDER[0], 'RSD')), backgroundColor: CHART_COLORS.PROCEED }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: {x:{stacked:true, grid: { color: '#1e293b' }}, y:{stacked:true, grid: { color: '#1e293b' }}} }
+            };
+        }
+        
+        function renderChart(canvasId, typeInfo, isPresentation = false) {
+            const ctx = document.getElementById(canvasId);
+            if (!ctx) return;
+            const targetInstances = isPresentation ? window.clonedChartInstances : chartInstances;
+
+            if (targetInstances[canvasId]) { targetInstances[canvasId].destroy(); delete targetInstances[canvasId]; }
+            let config = null;
+            if (typeInfo.type === 'bar') config = getBarConfig(typeInfo.col);
+            else if (typeInfo.type === 'line') config = getLineConfig(typeInfo.col);
+            else if (typeInfo.type === 'doughnut') config = getDoughnutConfig(typeInfo.col);
+            else if (typeInfo.type === 'groupedBar') config = getGroupedBarConfig(typeInfo.cols);
+            else if (typeInfo.type === 'financeRecon') config = getFinanceReconChart();
+            else if (typeInfo.type === 'qualityTrend') config = getQualityTrendChart();
+            else if (typeInfo.type === 'shiftTrend') return renderShiftTrendChart(canvasId, isPresentation); 
+            
+            if (config) {
+                 const newChart = new Chart(ctx, config);
+                 targetInstances[canvasId] = newChart;
+                 return newChart;
+            }
+        }
+
+
+        // --- DASHBOARD SECTION RENDER FUNCTIONS (Moved here to fix ReferenceErrors) ---
+
+        function renderMonthlySchedule(monthStr) {
+            if(!monthStr || monthStr === "ALL_TOTAL") return;
+            const container = document.getElementById('dashboard-monthly-preview');
+            container.className = 'grid grid-cols-1 lg:grid-cols-3 gap-6'; 
+            const parts = monthStr.split('-'); 
+            if(parts.length < 2) return;
+            const year = 2000 + parseInt(parts[0]);
+            const monthIdx = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].indexOf(parts[1]);
+            if(monthIdx === -1) return;
+            const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+            const staffSets = { morning: new Set(), evening: new Set(), night: new Set() };
+            for(let i=1; i<=daysInMonth; i++) {
+                const dateStr = `${year}-${String(monthIdx+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;
+                const dayData = shifts[dateStr];
+                if(dayData) {
+                    if(dayData.morning) dayData.morning.forEach(n => staffSets.morning.add(n));
+                    if(dayData.evening) dayData.evening.forEach(n => staffSets.evening.add(n));
+                    if(dayData.night) dayData.night.forEach(n => staffSets.night.add(n));
+                }
+            }
+            const shiftsMap = {
+                morning: { title: '1st Shift (Morning)', color: 'yellow', icon: 'fas fa-sun' },
+                evening: { title: '2nd Shift (Evening)', color: 'blue', icon: 'fas fa-moon' },
+                night: { title: '3rd Shift (Night)', color: 'red', icon: 'fas fa-star' }
+            };
+            let html = '';
+            Object.keys(shiftsMap).forEach(key => {
+                const conf = shiftsMap[key];
+                const names = Array.from(staffSets[key]).sort();
+                const count = names.length;
+                const listHtml = names.length > 0 
+                    ? `<ul class="space-y-2 p-4">${names.map(n => `<li class="flex items-center text-sm text-slate-300 border-b border-white/5 pb-2 last:border-0"><div class="w-2 h-2 rounded-full bg-${conf.color}-500 mr-3"></div>${n}</li>`).join('')}</ul>`
+                    : `<div class="p-6 text-center text-slate-500 italic text-sm">No staff assigned</div>`;
+                html += `<div class="glass-card rounded-xl overflow-hidden border-t-4 border-${conf.color}-500 flex flex-col h-full" id="monthly-shift-${key}"><div class="p-4 bg-dark-800/80 border-b border-dark-600 flex items-center justify-between shrink-0"><h4 class="font-bold text-white text-sm flex items-center"><i class="${conf.icon} text-${conf.color}-500 mr-2"></i>${conf.title}</h4><span class="bg-${conf.color}-500/20 text-${conf.color}-400 text-xs px-2 py-1 rounded-full font-bold">${count} Staff</span></div><div class="bg-dark-900/40 flex-1 overflow-y-auto custom-scrollbar">${listHtml}</div></div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderOverview(c,p){ 
+            if(!c) return;
+            WH_ORDER.forEach(wh=>{ 
+                createCard('row-orders', wh, formatNum(getMetric(c,wh,'Orders/Month')), 'Orders', calcDiff(getMetric(c,wh,'Orders/Month'), getMetric(p,wh,'Orders/Month')), getTrend(wh,'Orders/Month'), 'blue', getLast3Months(wh, 'Orders/Month')); 
+                createCard('row-returns', wh, formatNum(getMetric(c,wh,'Returns')), 'Returns', calcDiff(getMetric(c,wh,'Returns'), getMetric(p,wh,'Returns')), getTrend(wh,'Returns'), 'red', getLast3Months(wh, 'Returns')); 
+            }); 
+        }
+        function renderStorage(c, p) {
+            if(!c) return;
+            WH_ORDER.forEach(wh => {
+                const cap = getMetric(c, wh, 'Capacity');
+                const used = getMetric(c, wh, 'Utalized'); 
+                let pct = 0;
+                if (cap > 0 && used >= 0) { pct = ((used / cap) * 100).toFixed(1); } else if (used > 0 && cap === 0) { pct = 100; }
+                const prevCap = getMetric(p, wh, 'Capacity');
+                const prevUsed = getMetric(p, wh, 'Utalized');
+                let prevPct = 0;
+                if(prevCap > 0 && prevUsed >= 0) { prevPct = ((prevUsed / prevCap) * 100).toFixed(1); }
+                const cid = `chart-storage-${wh.replace(/\s/g,'')}-${Math.random().toString(36).substr(2,5)}`;
+                const html = `<div class="glass-card rounded-2xl p-6 border-l-4 border-orange-500"><div class="flex justify-between items-start mb-4"><div><h4 class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">${wh}</h4><div class="flex items-baseline gap-2 mt-1"><span class="text-3xl font-bold text-white num-font">${pct}%</span><span class="text-xs text-slate-500">Utilized</span></div></div><div class="text-right"><p class="text-xs text-slate-400 flex justify-between gap-4"><span>Capacity:</span> <span class="text-white font-mono font-bold">${formatNum(cap, 0)}</span></p><p class="text-xs text-slate-400 flex justify-between gap-4"><span>Used:</span> <span class="text-white font-mono font-bold">${formatNum(used, 0)}</span></p></div></div><div class="w-full bg-dark-800 h-2 rounded-full overflow-hidden mb-4 relative"><div class="bg-orange-500 h-full transition-all duration-500" style="width: ${Math.min(pct, 100)}%"></div></div><div class="h-24 w-full mt-2"><canvas id="${cid}"></canvas></div></div>`;
+                document.getElementById('storage-grid').insertAdjacentHTML('beforeend', html);
+                setTimeout(() => { 
+                    const ctx = document.getElementById(cid); 
+                    if(ctx) { 
+                        new Chart(ctx, { 
+                            type: 'bar', 
+                            data: { 
+                                labels: ['Previous', 'Current'], 
+                                datasets: [{ 
+                                    label: 'Utilization %', 
+                                    data: [prevPct, pct], 
+                                    backgroundColor: ['#334155', '#f97316'], 
+                                    borderRadius: 4, 
+                                    barThickness: 30 
+                                }] 
+                            }, 
+                            options: { 
+                                responsive: true, 
+                                maintainAspectRatio: false, 
+                                plugins: { legend: { display: false } }, 
+                                scales: { 
+                                    y: { 
+                                        beginAtZero: true, 
+                                        max: 100, 
+                                        grid: { color: '#1e293b' }, 
+                                        ticks: { display: false } 
+                                    }, 
+                                    x: { 
+                                        grid: { display: false }, 
+                                        ticks: { color: '#94a3b8', font: { size: 10 } } 
+                                    } 
+                                } 
+                            } 
+                        }); 
+                    } 
+                }, 50);
+            });
+        }
+        function renderQuality(c,p){ 
+            if(!c) return;
+            WH_ORDER.forEach(wh=>{ 
+                const el = document.getElementById('quality-grid'); 
+                if (el) el.insertAdjacentHTML('beforeend', `<div class="glass-card rounded-2xl p-6 border-l-4 border-green-500"><h4 class="text-slate-400 text-xs font-bold uppercase mb-4">${wh}</h4><div><div class="flex justify-between text-xs mb-1"><span class="text-slate-300">Order Accuracy</span><span class="font-bold text-white num-font">${getMetric(c,wh,'Order Accuracy',true).toFixed(1)}%</span></div><div class="w-full bg-dark-700 h-1.5"><div class="bg-green-500 h-1.5" style="width:${getMetric(c,wh,'Order Accuracy',true)}%"></div></div></div></div>`); 
+                
+                const totalOrders = getMetric(c, wh, 'Orders/Month'); 
+                const totalReturns = getMetric(c, wh, 'Returns'); 
+                // Mock Damage logic derived from poor accuracy for visualization
+                const mockDamages = totalOrders * (100 - getMetric(c,wh,'Order Accuracy',true)) / 1000; 
+                
+                const returnsRate = totalOrders > 0 ? (totalReturns / totalOrders) * 100 : 0; 
+                const damageRate = totalOrders > 0 ? (mockDamages / totalOrders) * 100 : 0; 
+                
+                // Historical rate calculation for trend history
+                const returnHistoryRates = monthList.slice(-6).map(m => {
+                    const orders = getMetric(m, wh, 'Orders/Month');
+                    const returns = getMetric(m, wh, 'Returns');
+                    return orders > 0 ? (returns / orders) * 100 : 0;
+                }).slice(-3); // Only need last 3 for the card
+
+                const damageHistoryRates = monthList.slice(-6).map(m => {
+                    const orders = getMetric(m, wh, 'Orders/Month');
+                    const accuracy = getMetric(m, wh, 'Order Accuracy', true);
+                    const damages = orders * (100 - accuracy) / 1000;
+                    return orders > 0 ? (damages / orders) * 100 : 0;
+                }).slice(-3);
+                
+                createQualityRateCard('quality-rate-grid', wh, 'Return', returnsRate, '#f87171', returnHistoryRates.map((v, i) => ({ month: monthList.slice(-3)[i], value: v }))); 
+                createQualityRateCard('quality-rate-grid', wh, 'Damage', damageRate, '#fb923c', damageHistoryRates.map((v, i) => ({ month: monthList.slice(-3)[i], value: v })));
+            }); 
+        }
+        function renderInbound(c,p){ 
+            if(!c) return;
+            renderMetricGroup('inbound-cases-grid',c,p,'inbound Case','Box'); 
+            renderMetricGroup('inbound-pallets-grid',c,p,'Inbound Pallets','Plt'); 
+            renderMetricGroup('inbound-trucks-grid',c,p,'Inbound Trucks 45 ft','Trk'); 
+        }
+        function renderOutbound(c,p){ 
+            if(!c) return;
+            renderMetricGroup('outbound-cases-grid',c,p,'Outbound Case','Box'); 
+            renderMetricGroup('outbound-pallets-grid',c,p,'Outbound Pallets','Plt'); 
+            renderMetricGroup('outbound-trucks-grid',c,p,'Outbound Trucks 45 ft','Trk'); 
+        }
+        function renderMetricGroup(id,c,p,col,u){ 
+            if(!c) return;
+            WH_ORDER.forEach(wh=>{ 
+                createCard(id, wh, formatNum(getMetric(c,wh,col)), u, calcDiff(getMetric(c,wh,col), getMetric(p,wh,col)), getTrend(wh,col), id.includes('inbound') ? 'blue' : 'indigo', getLast3Months(wh, col)); 
+            }); 
+        }
+        function renderRSD(c,p){ 
+            if(!c) return;
+            WH_ORDER.forEach(wh=>{ 
+                const sap = getMetric(c, wh, 'SAP'); 
+                const rsd = getMetric(c, wh, 'RSD'); 
+                const diff = Math.abs(sap - rsd); 
+                const match = sap > 0 ? (100 - (diff/sap)*100) : 0; 
+                const historyData = getLast3Months(wh, 'SAP').map((h, i) => { 
+                    const month = h.month; 
+                    const sapVal = getMetric(month, wh, 'SAP'); 
+                    return { month: month, value: sapVal }; 
+                }); 
+                createVerticalCard('rsd-vertical-cards-grid', wh, match.toFixed(1), sap, historyData.reverse(), '#facc15'); 
+            }); 
+        }
+        function renderPending(c,p){ 
+            if(!c) return;
+            WH_ORDER.forEach(wh=>{ 
+                createCard('pod-pending-grid',wh,formatNum(getMetric(c,wh,'POD pending'), 0),'Docs', calcDiff(getMetric(c,wh,'POD pending'), getMetric(p,wh,'POD pending')), getTrend(wh,'POD pending'), 'red', getLast3Months(wh, 'POD pending')); 
+                createCard('return-pending-grid',wh,formatNum(getMetric(c,wh,'Return pending'), 0),'Items', calcDiff(getMetric(c,wh,'Return pending'), getMetric(p,wh,'Return pending')), getTrend(wh,'Return pending'), 'red', getLast3Months(wh, 'Return pending')); 
+            }); 
+        }
+
+        // --- Workforce Hub Functions ---
+
+        // FIX: Defining renderEmpTable globally
+        function renderEmpTable() {
+            const tbody = document.getElementById('emp-table-body');
+            if (!tbody) return;
+
+            tbody.innerHTML = employees.map(emp => {
+                const actionsHtml = (currentUser && currentUser.role === 'admin') ? 
+                    `<td class="p-4 text-center admin-only"><div class="flex justify-center gap-2"><button onclick="addNewEmployee('${emp.id}')" class="text-blue-400 hover:text-blue-300"><i class="fas fa-edit"></i> Edit</button><button onclick="deleteEmployee('${emp.id}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i> Delete</button></div></td>` : '';
+
+                return `
+                    <tr class="hover:bg-dark-700/50">
+                        <td class="p-4">${emp.name}</td>
+                        <td class="p-4">${emp.staffId || 'N/A'}</td>
+                        ${actionsHtml}
+                    </tr>
+                `;
+            }).join('');
+            
+            // Re-apply role UI to ensure admin-only columns/buttons are correct
+            applyRoleUI(currentUser?.role);
+        }
+        
+        // FIX: Defining renderManagerLeaderboard globally
+        function renderManagerLeaderboard() {
+            const tbody = document.getElementById('mgr-leaderboard');
+            if (!tbody) return;
+            
+            const currentMonth = document.getElementById('otMonthPicker').value.slice(0, 7);
+            
+            const otTotals = overtime
+                .filter(o => o.date.startsWith(currentMonth))
+                .reduce((acc, curr) => {
+                    acc[curr.name] = (acc[curr.name] || 0) + curr.hours;
+                    return acc;
+                }, {});
+
+            const leaderboard = Object.keys(otTotals)
+                .map(name => ({ name, hours: otTotals[name] }))
+                .sort((a, b) => b.hours - a.hours)
+                .slice(0, 5); // Top 5
+
+            tbody.innerHTML = leaderboard.map((item, index) => {
+                let rankIcon = '';
+                if (index === 0) rankIcon = '<i class="fas fa-medal text-yellow-400 mr-2"></i>';
+                else if (index === 1) rankIcon = '<i class="fas fa-medal text-slate-400 mr-2"></i>';
+                else if (index === 2) rankIcon = '<i class="fas fa-medal text-orange-600 mr-2"></i>';
+
+                return `
+                    <tr class="hover:bg-dark-700/50 ${index === 0 ? 'bg-dark-700/70 font-bold' : ''}">
+                        <td class="p-3 w-16 text-center">${rankIcon}#${index + 1}</td>
+                        <td class="p-3">${item.name}</td>
+                        <td class="p-3 text-right num-font text-purple-300">${item.hours.toFixed(1)} hrs</td>
+                    </tr>
+                `;
+            }).join('') || '<tr><td colspan="3" class="p-4 text-center text-slate-500 italic">No overtime data for this month.</td></tr>';
+        }
+
+        // --- Employee Management Functions (Placeholder modals) ---
+
+        function addNewEmployee(empId = null) {
+            const isEdit = empId !== null;
+            const emp = isEdit ? employees.find(e => e.id == empId) : {};
+            
+            Swal.fire({
+                title: isEdit ? 'Edit Employee' : 'Add New Employee',
+                html: `
+                    <input id="swal-name" class="swal2-input bg-dark-800 border-dark-600 text-white" placeholder="Full Name" value="${emp?.name || ''}">
+                    <input id="swal-staff-id" class="swal2-input bg-dark-800 border-dark-600 text-white" placeholder="Staff ID (Optional)" value="${emp?.staffId || ''}">
+                    <input type="hidden" id="swal-id" value="${emp?.id || Date.now()}">
+                `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: isEdit ? 'Save Changes' : 'Add Employee',
+                preConfirm: () => {
+                    const name = document.getElementById('swal-name').value;
+                    const staffId = document.getElementById('swal-staff-id').value;
+                    const id = document.getElementById('swal-id').value;
+                    if (!name) {
+                        Swal.showValidationMessage('Name is required');
+                        return false;
+                    }
+                    return { id, name, staffId };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    saveEmployee(result.value);
+                }
+            });
+        }
+
+        async function saveEmployee({ id, name, staffId }) {
+            const index = employees.findIndex(e => e.id == id);
+            if (index !== -1) {
+                // Edit existing
+                employees[index] = { id, name, staffId };
+            } else {
+                // Add new
+                employees.push({ id, name, staffId });
+            }
+            await saveGithub('employees.json', employees);
+            renderEmpTable();
+            // Also update OT select box
+            const sel = document.getElementById('otEmpSelect'); 
+            if(sel) sel.innerHTML = '<option value="">Select...</option>' + employees.map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+
+            Swal.fire('Success', 'Employee list updated.', 'success');
+        }
+
+        async function deleteEmployee(empId) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    employees = employees.filter(e => e.id != empId);
+                    await saveGithub('employees.json', employees);
+                    renderEmpTable();
+                    Swal.fire('Deleted!', 'Employee has been removed.', 'success');
+                }
+            });
+        }
+        
+        // --- Manual Metrics & Data Uploads ---
+
+        // FIX: Defining populateManualFormMonth globally
+        function populateManualFormMonth() {
+            const select = document.getElementById('mm-month');
+            if (!select) return;
+            select.innerHTML = '';
+            monthList.slice().reverse().forEach(m => { // Show most recent first
+                select.innerHTML += `<option value="${m}">${m}</option>`;
+            });
+            if (monthList.length > 0) {
+                select.value = monthList[monthList.length - 1]; // Default to the latest month
+            }
+        }
+
+        function loadManualForm() {
+            const month = document.getElementById('mm-month').value;
+            const wh = document.getElementById('mm-wh').value;
+            
+            const monthData = manualMetrics[month] || {};
+            const whData = monthData[wh] || {};
+
+            // Storage
+            document.getElementById('mm-cap').value = whData.cap || '';
+            document.getElementById('mm-used').value = whData.used || '';
+            // Finance
+            document.getElementById('mm-sap').value = whData.sap || '';
+            document.getElementById('mm-rsd').value = whData.rsd || '';
+            // Pending
+            document.getElementById('mm-pod').value = whData.pod || '';
+            document.getElementById('mm-ret').value = whData.ret || '';
+            
+            // Render CSV Editor table with current data
+            renderCSVEditorTable();
+        }
+
+        async function saveManualMetrics() {
+            const month = document.getElementById('mm-month').value;
+            const wh = document.getElementById('mm-wh').value;
+
+            if (!manualMetrics[month]) manualMetrics[month] = {};
+            if (!manualMetrics[month][wh]) manualMetrics[month][wh] = {};
+
+            manualMetrics[month][wh] = {
+                cap: parseNum(document.getElementById('mm-cap').value),
+                used: parseNum(document.getElementById('mm-used').value),
+                sap: parseNum(document.getElementById('mm-sap').value),
+                rsd: parseNum(document.getElementById('mm-rsd').value),
+                pod: parseNum(document.getElementById('mm-pod').value),
+                ret: parseNum(document.getElementById('mm-ret').value)
+            };
+
+            await saveGithub('manual_metrics.json', manualMetrics);
+            render(); // Refresh dashboard with new manual metrics
+            Swal.fire('Saved', 'Manual metrics updated successfully.', 'success');
+        }
+        
+        function renderCSVEditorTable() {
+            const table = document.getElementById('csv-editor-table');
+            if (!table || rawData.length === 0) {
+                if(table) table.innerHTML = '<p class="p-4 text-center text-slate-500">No raw data loaded.</p>';
+                return;
+            }
+
+            const headers = Object.keys(rawData[0]);
+            let html = `<thead class="sticky top-0 bg-dark-800 text-slate-400"><tr>`;
+            
+            headers.forEach(h => {
+                html += `<th class="p-2">${h}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            rawData.forEach((row, rowIndex) => {
+                html += `<tr>`;
+                headers.forEach(header => {
+                    const value = row[header] !== undefined ? row[header] : '';
+                    // Allow editing all cells except 'Report_Month' and 'Warehouse' as they are keys
+                    const isEditable = header !== 'Report_Month' && header !== 'Warehouse';
+                    const editableAttr = isEditable ? `contenteditable="true" onblur="handleEdit(this, ${rowIndex}, '${header}')"` : '';
+                    const cls = isEditable ? 'hover:bg-dark-700/50 cursor-text' : 'text-slate-500';
+
+                    html += `<td class="p-2 border border-dark-700 ${cls}" ${editableAttr}>${value}</td>`;
+                });
+                html += `</tr>`;
+            });
+
+            table.innerHTML = html + `</tbody>`;
+        }
+        
+        function handleEdit(cell, rowIndex, header) {
+            const newValue = cell.textContent.trim();
+            // Update the in-memory rawData array
+            rawData[rowIndex][header] = newValue;
+            // Optionally, you could add logic to highlight changes
+        }
+
+        async function saveCSV() {
+            // Convert rawData back to CSV string
+            const csv = Papa.unparse(rawData);
+            
+            try {
+                // Since the original file was fetched from GitHub, we push the updated CSV back
+                const response = await fetch(`${WORKER_URL}/api/github-put`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: 'main.csv', content: csv })
+                });
+
+                if (!response.ok) throw new Error('Failed to save CSV to GitHub');
+
+                // Re-run init/render to re-process the new data and update month lists/dashboard
+                await init(false); 
+                Swal.fire('Saved', 'Master CSV updated successfully. Dashboard refreshed.', 'success');
+            } catch (error) {
+                console.error("CSV Save Error:", error);
+                Swal.fire('Error', 'Failed to save master CSV.', 'error');
+            }
+        }
+        
+        // --- Custom Card Management ---
+        function renderCustomCards(c, p) {
+            const container = document.getElementById('custom-metric-list');
+            const grid = document.getElementById('custom-cards-grid');
+            if (!container || !grid) return;
+            
+            grid.innerHTML = '';
+            container.innerHTML = '';
+
+            customCards.forEach(card => {
+                // Render card in Dashboard grid
+                const value = getMetric(c, card.wh, card.col);
+                const prevValue = getMetric(p, card.wh, card.col);
+                const diff = calcDiff(value, prevValue);
+                const trendData = getTrend(card.wh, card.col);
+
+                createCard('custom-cards-grid', card.name, formatNum(value, card.decimals || 1), card.unit, diff, trendData, card.color || 'brand', trendData);
+                grid.classList.remove('hidden'); // Show the grid if cards exist
+
+                // Render card management list in Admin/Data view
+                container.insertAdjacentHTML('beforeend', `
+                    <div class="p-4 rounded-lg bg-dark-900/50 border border-dark-700 flex justify-between items-center">
+                        <div>
+                            <p class="text-white font-bold">${card.name} (${card.wh})</p>
+                            <p class="text-xs text-slate-400">Column: ${card.col} | Color: <span class="text-${card.color}-400">${card.color}</span></p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="openAddCardModal('${card.id}')" class="text-brand-400 hover:text-brand-300"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteCustomCard('${card.id}')" class="text-red-400 hover:text-red-300"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                `);
+            });
+            if(customCards.length === 0) grid.classList.add('hidden');
+        }
+
+        function openAddCardModal(cardId = null) {
+            const isEdit = cardId !== null;
+            const card = isEdit ? customCards.find(c => c.id == cardId) : { name: '', wh: 'SPIMACO', col: Object.keys(rawData[0] || {}).find(k => k !== 'Report_Month' && k !== 'Warehouse') || '', unit: '', color: 'brand', decimals: 1, id: Date.now() };
+
+            const columnOptions = Object.keys(rawData[0] || {}).map(col => `<option value="${col}" ${card.col === col ? 'selected' : ''}>${col}</option>`).join('');
+            
+            Swal.fire({
+                title: isEdit ? 'Edit Custom Card' : 'Add New Custom Card',
+                html: renderCustomCardModalContent(card, columnOptions),
+                focusConfirm: false,
+                width: '600px',
+                showCancelButton: true,
+                confirmButtonText: isEdit ? 'Save Changes' : 'Add Card',
+                preConfirm: () => {
+                    const name = document.getElementById('swal-card-name').value;
+                    const wh = document.getElementById('swal-card-wh').value;
+                    const col = document.getElementById('swal-card-col').value;
+                    const unit = document.getElementById('swal-card-unit').value;
+                    const color = document.getElementById('swal-card-color').value;
+                    const decimals = parseInt(document.getElementById('swal-card-decimals').value) || 0;
+                    const id = document.getElementById('swal-card-id').value;
+                    if (!name || !col) {
+                        Swal.showValidationMessage('Name is required');
+                        return false;
+                    }
+                    return { id: parseInt(id), name, wh, col, unit, color, decimals };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    saveCustomCard(result.value);
+                }
+            });
+        }
+        
+        function renderCustomCardModalContent(card, columnOptions) {
+             return `
+                <input id="swal-card-id" type="hidden" value="${card.id}">
+                <div class="text-left space-y-3 p-2">
+                    <label class="block text-xs text-slate-400">Card Name</label>
+                    <input id="swal-card-name" class="swal2-input bg-dark-800 border-dark-600 text-white" placeholder="e.g., Total Inbound Pallets" value="${card.name}">
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-slate-400">Warehouse</label>
+                            <select id="swal-card-wh" class="swal2-input bg-dark-800 border-dark-600 text-white">
+                                ${WH_ORDER.map(wh => `<option value="${wh}" ${card.wh === wh ? 'selected' : ''}>${wh}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400">Value Column (from main.csv)</label>
+                            <select id="swal-card-col" class="swal2-input bg-dark-800 border-dark-600 text-white">
+                                ${columnOptions}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                         <div>
+                            <label class="block text-xs text-slate-400">Unit Label</label>
+                            <input id="swal-card-unit" class="swal2-input bg-dark-800 border-dark-600 text-white" placeholder="e.g., K Boxes" value="${card.unit}">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-400">Decimal Places</label>
+                            <input type="number" id="swal-card-decimals" class="swal2-input bg-dark-800 border-dark-600 text-white" value="${card.decimals}" min="0" max="3">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-slate-400">Color (Tailwind)</label>
+                        <select id="swal-card-color" class="swal2-input bg-dark-800 border-dark-600 text-white">
+                            ${['brand', 'blue', 'green', 'yellow', 'orange', 'red', 'purple', 'indigo'].map(c => `<option value="${c}" ${card.color === c ? 'selected' : ''}>${c}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function saveCustomCard(newCard) {
+            const index = customCards.findIndex(c => c.id === newCard.id);
+            if (index !== -1) {
+                customCards[index] = newCard; // Edit existing
+            } else {
+                customCards.push(newCard); // Add new
+            }
+            await saveGithub('custom_cards.json', customCards);
+            renderCustomCards(document.getElementById('monthSelect').value, null); // Re-render in admin view
+            render(); // Refresh dashboard view
+            Swal.fire('Success', 'Custom card list updated.', 'success');
+        }
+
+        async function deleteCustomCard(cardId) {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Delete this custom card?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then(async (result) => {
+                if (result.isConfirmed) {
+                    customCards = customCards.filter(c => c.id != cardId);
+                    await saveGithub('custom_cards.json', customCards);
+                    renderCustomCards(document.getElementById('monthSelect').value, null);
+                    render();
+                    Swal.fire('Deleted!', 'Custom card removed.', 'success');
+                }
+            });
+        }
+
+        // --- Execute initial data fetch on load ---
+        window.onload = function() {
+            if (document.getElementById('loginOverlay').style.display !== 'none') {
+                console.log("Waiting for user login...");
+            } else {
+                currentUser = { username: 'Guest', role: 'guest' };
+                applyRoleUI(currentUser.role);
+                loadAllInitialData();
+            }
+        };
+    </script>
+</body>
+</html>
