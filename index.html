@@ -15,12 +15,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.1.3/docx.umd.js"></script>
 
     <script>
-        tailwind.config = {
+       tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
-                        dark: { 900: '#020617', 800: '#0f172a', 700: '#1e293b', 600: '#334155' },
+                        
+                        dark: { 
+                            900: 'var(--bg-main)',       
+                            800: 'var(--bg-card)',       
+                            700: 'var(--border-main)',   
+                            600: 'var(--border-light)'   
+                        },
+                        
+                        slate: {
+                            500: 'var(--text-muted)',
+                            400: 'var(--text-secondary)',
+                            300: 'var(--text-secondary)',
+                            200: 'var(--text-primary)' 
+                        },
                         brand: { 500: '#6366f1', 400: '#818cf8', 600: '#4f46e5' },
                     },
                     fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
@@ -29,114 +42,246 @@
                 }
             }
         }
-        Chart.defaults.color = '#94a3b8'; Chart.defaults.borderColor = '#1e293b';
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+ <style>
+        :root {
+            
+            --bg-main: #020617;
+            --bg-card: #0f172a;
+            --bg-glass: rgba(15, 23, 42, 0.6);
+            --border-main: #1e293b;
+            --border-light: #334155;
+            
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --text-inverse: #0f172a; 
 
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; overflow-x: hidden; scroll-behavior: smooth; }
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            --glass-border: rgba(255, 255, 255, 0.08);
+
+            --matrix-bg: #0f172a;
+            --matrix-header: #1e293b;
+            --matrix-border: #1e293b;
+            
+            
+            --chart-grid: #1e293b;
+            --chart-text: #94a3b8;
+        }
+
+        html.light {
+            
+            --bg-main: #f8fafc;        
+            --bg-card: #ffffff;        
+            --bg-glass: rgba(255, 255, 255, 0.9);
+            --border-main: #e2e8f0;    
+            --border-light: #cbd5e1;   
+            
+            --text-primary: #0f172a;   
+            --text-secondary: #475569; 
+            --text-muted: #94a3b8;
+            --text-inverse: #ffffff;
+
+            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --glass-border: rgba(0, 0, 0, 0.05);
+
+            --matrix-bg: #ffffff;
+            --matrix-header: #f1f5f9;
+            --matrix-border: #e2e8f0;
+
+            --chart-grid: #e2e8f0;
+            --chart-text: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
         .num-font { font-family: 'JetBrains Mono', monospace; }
-        .glass-card { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2); transition: all 0.3s ease; position: relative; overflow: hidden; }
+
+        .glass-card {
+            background: var(--bg-glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--shadow-card);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
         .glass-card:hover { transform: translateY(-3px); border-color: rgba(99, 102, 241, 0.4); }
-        
+
         .shift-card-container { position: relative; }
-        .d-shift-card { min-height: 260px; }
+        .d-shift-card { 
+            min-height: 260px; 
+            padding: 1.5rem; 
+            border-radius: 1rem; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100%; 
+            border: 1px solid var(--glass-border);
+        }
 
-        .shift-staff-overlay { position: absolute; inset: 0; background: rgba(2, 6, 23, 0.95); opacity: 0; transition: opacity 0.25s ease; z-index: 20; padding: 1rem; text-align: center; backdrop-filter: blur(6px); pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; }
+        .d-morning { background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(234, 179, 8, 0.02)); border-color: rgba(234, 179, 8, 0.3); }
+        .d-evening { background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.02)); border-color: rgba(59, 130, 246, 0.3); }
+        .d-night { background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.02)); border-color: rgba(239, 68, 68, 0.3); }
+
+        .sshift-staff-overlay {
+            position: absolute; inset: 0;
+            background: rgba(2, 6, 23, 0.96); 
+            opacity: 0; transition: opacity 0.2s ease;
+            z-index: 20; padding: 1.5rem; text-align: center;
+            backdrop-filter: blur(4px); pointer-events: none;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
         .shift-card-container:hover .shift-staff-overlay { opacity: 1; pointer-events: auto; }
-        .shift-staff-overlay .staff-wrap { width: 100%; margin-top: .5rem; max-height: calc(100% - 40px); overflow: auto; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; align-content: start; }
-        .shift-staff-overlay .staff-pill { font-size: 12px; padding: 4px 6px; border-radius: 8px; background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.18); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .shift-staff-overlay h5, 
+        .shift-staff-overlay div, 
+        .shift-staff-overlay span {
+            color: #ffffff !important;
+        }
+        .shift-staff-overlay .staff-wrap {
+            width: 100%; margin-top: .5rem; max-height: calc(100% - 40px); overflow: auto;
+            display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; align-content: start;
+        }
+        .shift-staff-overlay .staff-pill {
+            font-size: 12px; padding: 4px 6px; border-radius: 8px;
+            background: rgba(148, 163, 184, 0.12); border: 1px solid rgba(148, 163, 184, 0.18);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e2e8f0;
+        }
 
-        .sparkline-container { height: 50px; width: 100%; margin-top: 10px; opacity: 0.8; }
-        .chart-box { position: relative; height: 320px; width: 100%; }
+
+        .matrix-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-light); user-select: none; }
+        .matrix-table { width: 100%; border-collapse: separate; border-spacing: 1px; min-width: 1000px; background: var(--bg-card); }
         
-        #loginOverlay { position: fixed; inset: 0; background: #020617; z-index: 9999; display: flex; align-items: center; justify-content: center; }
-        #loadingOverlayData { position: fixed; inset: 0; background: rgba(2,6,23,0.9); z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; }
-        
-        .matrix-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid #334155; user-select: none; }
-        .matrix-table { width: 100%; border-collapse: separate; border-spacing: 1px; min-width: 1000px; background: #0f172a; }
-        .matrix-th { background: #1e293b; color: #94a3b8; padding: 8px; text-align: center; font-size: 0.7rem; width: 30px; }
-        .matrix-td-name { background: #1e293b; color: white; padding: 6px 12px; font-weight: 600; min-width: 150px; position: sticky; left: 0; z-index: 10; border-right: 2px solid #334155; }
-        .matrix-cell { background: #0f172a; cursor: pointer; height: 36px; text-align: center; transition: background 0.1s; border: 1px solid #1e293b; font-size: 0.75rem; color: #fff; }
-        .matrix-cell:hover { border-color: white; }
-        .matrix-td-action { background: #1e293b; padding: 4px; border-left: 2px solid #334155; position: sticky; right: 0; z-index: 10; width: 120px; text-align: center; }
+        .matrix-th { 
+            background: var(--matrix-header); 
+            color: var(--text-secondary); 
+            padding: 8px; text-align: center; font-size: 0.7rem; width: 30px; 
+            border-bottom: 1px solid var(--border-light);
+        }
+        .matrix-td-name { 
+            background: var(--matrix-header); 
+            color: var(--text-primary); 
+            padding: 6px 12px; font-weight: 600; min-width: 150px; 
+            position: sticky; left: 0; z-index: 10; 
+            border-right: 2px solid var(--border-light); 
+        }
+        .matrix-cell { 
+            background: var(--matrix-bg); 
+            cursor: pointer; height: 36px; text-align: center; 
+            transition: background 0.1s; 
+            border: 1px solid var(--matrix-border); 
+            font-size: 0.75rem; color: var(--text-primary); 
+        }
+        .matrix-cell:hover { border-color: var(--text-secondary); }
+        .matrix-td-action { 
+            background: var(--matrix-header); 
+            padding: 4px; border-left: 2px solid var(--border-light); 
+            position: sticky; right: 0; z-index: 10; width: 120px; text-align: center; 
+        }
+
 
         .cell-m { background-color: #facc15 !important; color: black !important; }
         .cell-e { background-color: #60a5fa !important; color: black !important; }
         .cell-n { background-color: #f87171 !important; color: black !important; }
-        .cell-weekend { background-color: #334155; opacity: 0.4; pointer-events: none; }
+        .cell-weekend { background-color: var(--border-light); opacity: 0.5; pointer-events: none; }
         .cell-nowork { background-color: #475569 !important; color: white !important; }
         .cell-vacation { background-color: #a855f7 !important; color: white !important; font-weight: bold; cursor: not-allowed; border: 1px solid #7e22ce !important; }
 
-        .tool-btn { transition: all 0.2s; border: 2px solid transparent; }
-        .tool-btn.active { transform: scale(1.1); border-color: white; box-shadow: 0 0 10px rgba(255,255,255,0.3); }
 
-        .email-table-out { width: 100%; border-collapse: collapse; font-family: Arial, sans-serif; font-size: 12px; text-align: center; color: black; background: white; }
-        .email-th { background-color: #f4b084; color: black; font-weight: bold; padding: 6px; border: 1px solid #000; }
-        .email-td { border: 1px solid #000; padding: 4px; height: 20px; }
-        .email-td-name { border: 1px solid #000; padding: 4px; text-align: left; font-weight: bold; background: #eee; width: 120px; }
-
-        .d-shift-card { padding: 1.5rem; border-radius: 1rem; display: flex; flex-direction: column; height: 100%; border: 1px solid rgba(255,255,255,0.1); }
-        .d-morning { background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(234, 179, 8, 0.05)); border-color: rgba(234, 179, 8, 0.5); }
-        .d-evening { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)); border-color: rgba(59, 130, 246, 0.5); }
-        .d-night { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05)); border-color: rgba(239, 68, 68, 0.5); }
-
-        .admin-hidden, .manager-hidden, .supervisor-hidden { display: none !important; }
-        .manager-access { display: block; } 
-        
-        .nav-tab { cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; transition: all 0.2s; color: #94a3b8; }
-        .nav-tab:hover { background: rgba(255,255,255,0.05); color: white; }
-        .nav-tab.active { background: #4f46e5; color: white; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3); }
-
-        .quick-nav { display: none; }
-        .quick-nav-dot { display: none; }
-
-        #dashboard-links a { display: block; padding: 6px 12px; border-radius: 8px; background: #0f172a; color: #94a3b8; font-weight: 600; transition: background 0.2s, color 0.2s; }
-        #dashboard-links a:hover { background: #4f46e5; color: #ffffff; }
-        
-        .section-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid; padding-left: 0.75rem; }
-        .title-container { margin-bottom: 1.5rem; display: flex; align-items: center; }
-
-        .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 150px; overflow-y: auto; margin-top: 10px; border: 1px solid #334155; padding: 8px; border-radius: 8px; }
-        .icon-option { background: #334155; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 36px; transition: all 0.2s; color: #94a3b8; }
-        .icon-option:hover, .icon-option.selected { background: #6366f1; color: white; transform: scale(1.1); border: 1px solid white; }
-
-        #custom-cards-grid .fa-trash { display: none; }
-        #csv-form-tabs button.csv-tab-active { background-color: #6366f1; color: white; }
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; border: 1px solid #0f172a; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6366f1; } 
-        
         .scrollable-table-container {
-            max-height: 400px; 
-            overflow-y: auto;  
-            border-radius: 0.5rem;
-            border: 1px solid #334155;
+            max-height: 400px; overflow-y: auto;
+            border-radius: 0.5rem; border: 1px solid var(--border-light);
+        }
+        .sticky-header th {
+            position: sticky; top: 0; z-index: 10;
+            background-color: var(--matrix-header);
+            color: var(--text-secondary);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+
+        input, select, textarea {
+            background-color: var(--bg-card) !important;
+            border: 1px solid var(--border-light) !important;
+            color: var(--text-primary) !important;
         }
         
-        .sticky-header th {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background-color: #1e293b; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }	
+        html.light input[type="date"]::-webkit-calendar-picker-indicator,
+        html.light input[type="time"]::-webkit-calendar-picker-indicator,
+        html.light input[type="month"]::-webkit-calendar-picker-indicator {
+            filter: invert(0); opacity: 0.6;
+        }
         input[type="date"]::-webkit-calendar-picker-indicator,
         input[type="time"]::-webkit-calendar-picker-indicator,
         input[type="month"]::-webkit-calendar-picker-indicator {
-            filter: invert(1); 
-            cursor: pointer;
-            opacity: 0.7;
-            transition: opacity 0.2s;
+            filter: invert(1); cursor: pointer; opacity: 0.7; transition: opacity 0.2s;
         }
+
+
+        .nav-tab { 
+            cursor: pointer; padding: 0.5rem 1rem; border-radius: 0.5rem; 
+            font-size: 0.85rem; font-weight: 600; transition: all 0.2s; 
+            color: var(--text-secondary); 
+        }
+        .nav-tab:hover { background: var(--border-light); color: var(--text-primary); }
+        .nav-tab.active { background: #4f46e5; color: white; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3); }
+
+
+        #dashboard-links a { 
+            display: block; padding: 6px 12px; border-radius: 8px; 
+            background: var(--bg-card); color: var(--text-secondary); 
+            font-weight: 600; transition: background 0.2s, color 0.2s; 
+        }
+        #dashboard-links a:hover { background: #4f46e5; color: #ffffff; }
+
+
         
-        input[type="date"]::-webkit-calendar-picker-indicator:hover,
-        input[type="time"]::-webkit-calendar-picker-indicator:hover,
-        input[type="month"]::-webkit-calendar-picker-indicator:hover {
-            opacity: 1;
-        }
+
+        html.light #presentBtn { display: none !important; }
+
+        html.light .text-white { color: #0f172a !important; }
+        
+        html.light .bg-brand-600 .text-white,
+        html.light .bg-indigo-600 .text-white, 
+        html.light .bg-purple-600 .text-white, 
+        html.light .bg-green-600 .text-white,  
+        html.light .bg-red-600 .text-white,
+        html.light .bg-blue-600 .text-white,
+        html.light .bg-orange-600 .text-white,
+        html.light .bg-yellow-400 .text-black, 
+        html.light .shift-staff-overlay .text-white,
+        html.light .matrix-td-name .text-white
+        { color: #ffffff !important; }
+        
+        .section-title { font-size: 0.9rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border-left: 3px solid; padding-left: 0.75rem; color: var(--text-primary); }
+        
+        .sparkline-container { height: 50px; width: 100%; margin-top: 10px; opacity: 0.8; }
+        .chart-box { position: relative; height: 320px; width: 100%; }
+        #loginOverlay { position: fixed; inset: 0; background: var(--bg-main); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        #loadingOverlayData { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 9000; display: none; flex-direction: column; align-items: center; justify-content: center; }
+        html.light #loadingOverlayData { background: rgba(255,255,255,0.9); }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: var(--bg-main); border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; border: 1px solid var(--bg-main); }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+
+        .tool-btn { transition: all 0.2s; border: 2px solid transparent; }
+        .tool-btn.active { transform: scale(1.1); border-color: var(--text-primary); box-shadow: 0 0 10px rgba(125,125,125,0.3); }
+
+        .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-height: 150px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--border-light); padding: 8px; border-radius: 8px; }
+        .icon-option { background: var(--border-light); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; height: 36px; transition: all 0.2s; color: var(--text-secondary); }
+        .icon-option:hover, .icon-option.selected { background: #6366f1; color: white; transform: scale(1.1); border: 1px solid white; }
     </style>
+
 </head>
 <body class="flex h-screen overflow-hidden">
 
@@ -191,17 +336,35 @@
     </aside>
 
     <main class="flex-1 flex flex-col h-full bg-dark-900 relative overflow-hidden">
-        <header class="h-16 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-8 z-30">
-            <div><h2 class="text-xl font-bold text-white" id="pageTitle">Dashboard Overview</h2><p class="text-xs text-slate-400" id="lastUpdateTxt">Syncing...</p></div>
-            <div class="flex items-center gap-4">
+        <header class="h-16 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-8 z-30 transition-colors duration-300">
+            <div>
+                <h2 class="text-xl font-bold text-white dark:text-white" id="pageTitle">Dashboard Overview</h2>
+                <p class="text-xs text-slate-400" id="lastUpdateTxt">Syncing...</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
                 <div id="save-indicator" class="hidden flex items-center text-green-400 text-xs font-bold mr-4"><i class="fas fa-check-circle mr-2"></i> Saved</div>
                 <div class="h-6 w-px bg-dark-600 mx-2"></div>
-                <select id="monthSelect" class="bg-dark-900 border border-dark-600 text-white text-xs rounded pl-3 pr-8 py-1.5 outline-none focus:border-brand-500"></select>
-                <button id="refresh-btn" onclick="refreshAllData()" class="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1 ml-2"><i class="fas fa-sync-alt"></i></button>
-                <div id="warehouse-filter" class="flex items-center gap-3 ml-4 text-xs"></div>
-				<button onclick="getDailySummary()" class="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-2 ml-2 shadow-lg border border-white/10 transition-all hover:scale-105"><i class="fas fa-robot"></i> <span class="hidden md:inline">AI Insight</span></button>
-                <button id="presentation-btn" onclick="startPresentation()" class="bg-brand-600 hover:bg-brand-500 text-white px-3 py-1 rounded text-xs font-bold flex items-center gap-1 ml-2"><i class="fas fa-film"></i> Present</button>
-            </div>
+                
+                <select id="monthSelect" class="bg-dark-900 border border-dark-600 text-white text-xs rounded pl-3 pr-8 py-1.5 outline-none focus:border-brand-500 transition-colors"></select>
+                <div id="warehouse-filter" class="flex items-center gap-3 ml-2 text-xs"></div>
+                
+                <button id="refresh-btn" onclick="refreshAllData()" class="bg-green-600 hover:bg-green-500 text-white px-2 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-lg transition-transform hover:scale-105" title="Refresh Data">
+                    <i class="fas fa-sync-alt text-white"></i>
+                </button>
+
+                <button onclick="getDailySummary()" class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105 border border-purple-500/50">
+                    <i class="fas fa-robot text-white"></i> <span class="hidden md:inline text-white">AI Insight</span>
+                </button>
+                
+                <button id="presentBtn" onclick="startPresentation()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 shadow-lg transition-transform hover:scale-105 admin-only" title="Start Presentation Mode">
+                    <i class="fas fa-tv text-white"></i> <span class="hidden md:inline text-white">Present</span>
+                </button>
+
+                <button onclick="toggleTheme()" class="bg-dark-800 border border-dark-600 hover:bg-dark-700 text-white px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 shadow-lg transition-all" title="Toggle Theme">
+                    <i class="fas fa-adjust" id="theme-icon"></i>
+                </button>
+           </div>
         </header>
 
         <div id="contentArea" class="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth relative">
@@ -218,75 +381,80 @@
 <div id="view-dashboard" class="main-view space-y-12 pb-20">
     <div id="shift-log-display" class="hidden animate-fade-in mb-10 manager-access">
         <div class="flex justify-between items-center mb-6">
-            <div class="title-container border-green-500 m-0"><h3 class="section-title text-green-400">Daily Shift Performance</h3></div>
-            <span class="bg-green-900/30 text-green-400 px-3 py-1 rounded text-xs font-mono font-bold" id="shift-log-date">--/--/----</span>
+            <div class="title-container border-green-500 m-0"><h3 class="section-title text-green-500">Daily Shift Performance</h3></div>
+            <span class="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 px-3 py-1 rounded text-xs font-mono font-bold border border-green-200 dark:border-green-800" id="shift-log-date">--/--/----</span>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="shift-card-container group">
-                <div class="d-shift-card d-morning">
+            <div class="shift-card-container group relative overflow-hidden rounded-xl">
+                <div class="d-shift-card d-morning h-full">
                     <div class="flex justify-between items-center mb-4 border-b border-yellow-500/30 pb-2">
-                        <h4 class="text-xl font-bold text-yellow-100 flex items-center gap-2"><i class="fas fa-sun text-yellow-400"></i> Morning Shift</h4>
+                        <h4 class="text-xl font-bold text-yellow-700 dark:text-yellow-100 flex items-center gap-2"><i class="fas fa-sun text-yellow-500"></i> Morning Shift</h4>
                     </div>
-                    <div class="space-y-3 text-sm text-yellow-50/80 flex-1" id="card-stats-morning">
+                    <div class="space-y-3 text-sm text-yellow-900 dark:text-yellow-50/80 flex-1" id="card-stats-morning">
                         <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
                     </div>
                 </div>
-                <div class="shift-staff-overlay rounded-xl">
-                    <h5 class="text-yellow-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
-                    <div id="card-staff-morning" class="staff-wrap"></div>
+                <div class="shift-staff-overlay">
+                    <h5 class="text-white font-bold mb-2 uppercase text-sm tracking-wider border-b border-white/20 pb-1 w-full text-center">Staff on Duty</h5>
+                    <div id="card-staff-morning" class="staff-wrap w-full" dir="auto"></div>
                 </div>
             </div>
-            <div class="shift-card-container group">
-                <div class="d-shift-card d-evening">
+
+            <div class="shift-card-container group relative overflow-hidden rounded-xl">
+                <div class="d-shift-card d-evening h-full">
                     <div class="flex justify-between items-center mb-4 border-b border-blue-500/30 pb-2">
-                        <h4 class="text-xl font-bold text-blue-100 flex items-center gap-2"><i class="fas fa-moon text-blue-400"></i> Evening Shift</h4>
+                        <h4 class="text-xl font-bold text-blue-700 dark:text-blue-100 flex items-center gap-2"><i class="fas fa-moon text-blue-500"></i> Evening Shift</h4>
                     </div>
-                    <div class="space-y-3 text-sm text-blue-50/80 flex-1" id="card-stats-evening">
+                    <div class="space-y-3 text-sm text-blue-900 dark:text-blue-50/80 flex-1" id="card-stats-evening">
                         <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
                     </div>
                 </div>
-                <div class="shift-staff-overlay rounded-xl">
-                    <h5 class="text-blue-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
-                    <div id="card-staff-evening" class="staff-wrap"></div>
+                <div class="shift-staff-overlay">
+                    <h5 class="text-white font-bold mb-2 uppercase text-sm tracking-wider border-b border-white/20 pb-1 w-full text-center">Staff on Duty</h5>
+                    <div id="card-staff-evening" class="staff-wrap w-full" dir="auto"></div>
                 </div>
             </div>
-            <div class="shift-card-container group">
-                <div class="d-shift-card d-night">
+
+            <div class="shift-card-container group relative overflow-hidden rounded-xl">
+                <div class="d-shift-card d-night h-full">
                     <div class="flex justify-between items-center mb-4 border-b border-red-500/30 pb-2">
-                        <h4 class="text-xl font-bold text-red-100 flex items-center gap-2"><i class="fas fa-star text-red-400"></i> Night Shift</h4>
+                        <h4 class="text-xl font-bold text-red-700 dark:text-red-100 flex items-center gap-2"><i class="fas fa-star text-red-500"></i> Night Shift</h4>
                     </div>
-                    <div class="space-y-3 text-sm text-red-50/80 flex-1" id="card-stats-night">
+                    <div class="space-y-3 text-sm text-red-900 dark:text-red-50/80 flex-1" id="card-stats-night">
                         <p class="italic opacity-50">No data loaded via Shift Log CSV</p>
                     </div>
                 </div>
-                <div class="shift-staff-overlay rounded-xl">
-                    <h5 class="text-red-400 font-bold mb-2 uppercase text-sm tracking-wider">Staff on Duty</h5>
-                    <div id="card-staff-night" class="staff-wrap"></div>
+                <div class="shift-staff-overlay">
+                    <h5 class="text-white font-bold mb-2 uppercase text-sm tracking-wider border-b border-white/20 pb-1 w-full text-center">Staff on Duty</h5>
+                    <div id="card-staff-night" class="staff-wrap w-full" dir="auto"></div>
                 </div>
             </div>
         </div>
 
         <div class="glass-card rounded-2xl p-6 mt-6 border border-dark-700">
-            <h4 class="text-white font-bold text-sm mb-4"><i class="fas fa-chart-line text-brand-400 mr-2"></i>Shift Performance Trends (Last 30 Days)</h4>
+            <h4 class="text-slate-700 dark:text-white font-bold text-sm mb-4"><i class="fas fa-chart-line text-brand-500 mr-2"></i>Shift Performance Trends (Last 30 Days)</h4>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="h-64 w-full bg-dark-800/30 rounded-xl p-2 border border-dark-600/50">
-                    <h5 class="text-[10px] text-slate-400 font-bold mb-2 text-center uppercase">Dispatch Comparison (By Shift)</h5>
+                
+                <div class="h-64 w-full bg-dark-900/50 rounded-xl p-2 border border-dark-700">
+                    <h5 class="text-[10px] text-slate-500 font-bold mb-2 text-center uppercase">Dispatch Comparison</h5>
                     <canvas id="chart-shift-dispatch"></canvas>
                 </div>
-                <div class="h-64 w-full bg-dark-800/30 rounded-xl p-2 border border-dark-600/50">
-                    <h5 class="text-[10px] text-slate-400 font-bold mb-2 text-center uppercase">Trucks Comparison (By Shift)</h5>
+
+                <div class="h-64 w-full bg-dark-900/50 rounded-xl p-2 border border-dark-700">
+                    <h5 class="text-[10px] text-slate-500 font-bold mb-2 text-center uppercase">Trucks Comparison</h5>
                     <canvas id="chart-shift-trucks"></canvas>
                 </div>
             </div>
-            <div id="shift-stats-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-dark-700/50"></div>
+            <div id="shift-stats-container" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-dark-700"></div>
         </div>
-    </div> 
+    </div>
 
     <div id="custom-cards-grid" class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 hidden"></div>
 
     <section id="overview" class="animate-fade-in">
         <div class="title-container border-brand-500"><h3 class="section-title text-brand-400">Overview</h3></div>
+		
         <div class="grid grid-cols-3 gap-6 mb-8" id="row-orders"></div>
         <div class="grid grid-cols-3 gap-6 mb-8" id="row-returns"></div>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
@@ -366,9 +534,9 @@
 
     <section id="monthly-schedule" class="animate-fade-in mt-12 mb-8 manager-access hidden">
         <div class="title-container border-slate-500 flex justify-between items-center pr-2">
-            <h3 class="section-title text-slate-400"><i class="far fa-calendar-alt mr-2"></i> Monthly Schedule Snapshot</h3>
-            <button onclick="jumpToCurrentMonth()" class="bg-slate-700 hover:bg-brand-600 text-white px-3 py-1 rounded-lg text-[10px] font-bold border border-slate-600 transition-all flex items-center gap-2 shadow-lg group">
-                <i class="fas fa-clock text-slate-400 group-hover:text-white"></i> 
+            <h3 class="section-title text-slate-500 dark:text-slate-400"><i class="far fa-calendar-alt mr-2"></i> Monthly Schedule Snapshot</h3>
+            <button onclick="jumpToCurrentMonth()" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-600 transition-all flex items-center gap-2 shadow-lg group">
+                <i class="fas fa-clock text-slate-300 group-hover:text-white"></i> 
                 Show Current Month
             </button>
         </div>
@@ -789,12 +957,14 @@
             <h3 class="text-white font-bold text-lg flex items-center gap-2"><i class="fas fa-sparkles text-purple-400"></i> Daily Executive Summary</h3>
             <button onclick="document.getElementById('aiSummaryModal').style.display='none'" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-times text-xl"></i></button>
         </div>
-        <div id="aiSummaryContent" class="p-6 text-slate-300 text-sm leading-relaxed overflow-y-auto custom-scrollbar" dir="rtl" style="text-align: right;">
+        
+        <div id="aiSummaryContent" class="p-6 text-slate-300 text-sm leading-relaxed overflow-y-auto custom-scrollbar text-left" dir="ltr">
             <div class="flex flex-col items-center justify-center py-10 space-y-4">
                 <i class="fas fa-circle-notch fa-spin text-4xl text-purple-500"></i>
                 <p class="animate-pulse">Analyzing dashboard data...</p>
             </div>
         </div>
+        
         <div class="p-3 bg-dark-900/50 border-t border-white/5 text-[10px] text-slate-500 text-center flex justify-between items-center px-6">
             <span>Logistics Manager AI 0.1V</span>
             <span id="ai-cache-status" class="hidden text-green-400"><i class="fas fa-bolt mr-1"></i> Cached Result</span>
@@ -853,10 +1023,7 @@ function compressImage(file, maxWidth, quality) {
         let selectedWarehouses = [...WH_ORDER];
         let sessionToken = null; 
         let currentUser = null; 
-// Provide a helper to safely get the current user's role or a sensible default.
 function getUserRole() {
-  // If currentUser is defined and has a role return it. Otherwise fallback to whatever was stored
-  // in localStorage during a previous session or default to "guest" for unauthenticated users.
   return (currentUser && currentUser.role) ? currentUser.role : (localStorage.getItem('userRole') || 'guest');
 }
         let employees = []; 
@@ -1017,13 +1184,12 @@ function logout() {
                 if (dashboardAccessGroup) { if (dashboardPerm === false) dashboardAccessGroup.classList.add('hidden'); else dashboardAccessGroup.classList.remove('hidden'); }
             }
         }
-// Use a safe role lookup to avoid errors when currentUser is null
+
 const __roleSafe = getUserRole();
 if (permissions && permissions[__roleSafe]) {
   const perms = permissions[__roleSafe];
   const cardPerms = perms.cards || {};
 
-  // هل فيه أي قسم داشبورد ظاهر لهذا الدور؟
   const anyDashboardSectionVisible = [
     'shift-log-display','overview','storage','quality','inbound','outbound','finance','pending',
     'monthly-schedule','vacations-section','pallets-summary','custom-cards-grid','ot-leaderboard-section'
@@ -1032,7 +1198,7 @@ if (permissions && permissions[__roleSafe]) {
   if (perms.dashboard !== false && anyDashboardSectionVisible) {
     showMainView('dashboard');
   } else {
-    showMainView('workforce'); // وبيختار أول تبويب مسموح تلقائي (بفضل تعديل 1)
+    showMainView('workforce'); 
   }
 } else {
   showMainView('dashboard');
@@ -1100,7 +1266,7 @@ if (permissions && permissions[__roleSafe]) {
         ? activeBtn.id.replace('tab-', '')
         : null;
 
-    // Determine the user's role safely, falling back to guest if unknown
+
     const safeRoleForTab = getUserRole();
     const preferred = activeId || getFirstAllowedWorkforceTab(safeRoleForTab);
 
@@ -1407,6 +1573,7 @@ function renderWeekendTable() {
 
 		}
 
+
 function renderShiftTrendChart() {
     const ctxDisp = document.getElementById('chart-shift-dispatch');
     const ctxTrk = document.getElementById('chart-shift-trucks');
@@ -1430,8 +1597,11 @@ function renderShiftTrendChart() {
     const dDispM = [], dDispE = [], dDispN = [];
     const dTrkM = [], dTrkE = [], dTrkN = [];
 
-    let maxTrucks = { val: -1, date: '-', breakdown: {m:0, e:0, n:0} };
-    let maxPallets = { val: -1, date: '-', breakdown: {m:0, e:0, n:0} };
+    let peakDayStats = {
+        date: '-',
+        trucks: { total: -1, m: 0, e: 0, n: 0 },
+        pallets: { total: 0, m: 0, e: 0, n: 0 }
+    };
     
     const shiftStats = { 
         morning: { truckSum: 0, daysCount: 0, rec: 0, disp: 0 }, 
@@ -1439,37 +1609,54 @@ function renderShiftTrendChart() {
         night:   { truckSum: 0, daysCount: 0, rec: 0, disp: 0 } 
     };
 
-    const getVal = (obj, key1, key2) => {
+    const getVal = (obj, key) => {
         if (!obj) return 0;
-        let v = obj[key1];
-        if (v === undefined || v === null || v === '') v = obj[key2];
-        return parseInt(v) || 0;
+        return parseInt(obj[key]) || 0;
     };
 
     last30.forEach(dateKey => {
         const log = masterShiftLogs[dateKey];
         const displayDate = log.displayDate || new Date(dateKey).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
 
-        const mRec = getVal(log.morning, 'rec'); const mDisp = getVal(log.morning, 'disp'); const mTrk = getVal(log.morning, 'trucksRec', 'act');
-        const eRec = getVal(log.evening, 'rec'); const eDisp = getVal(log.evening, 'disp'); const eTrk = getVal(log.evening, 'trucksRec', 'act');
-        const nRec = getVal(log.night, 'rec');   const nDisp = getVal(log.night, 'disp');   const nTrk = getVal(log.night, 'trucksRec', 'act');
+        const mDisp = getVal(log.morning, 'disp'); 
+        const eDisp = getVal(log.evening, 'disp'); 
+        const nDisp = getVal(log.night, 'disp');
+
+        const mTrkChart = getVal(log.morning, 'trucksRec') || getVal(log.morning, 'act');
+        const eTrkChart = getVal(log.evening, 'trucksRec') || getVal(log.evening, 'act');
+        const nTrkChart = getVal(log.night, 'trucksRec') || getVal(log.night, 'act');
 
         dDispM.push(mDisp); dDispE.push(eDisp); dDispN.push(nDisp);
-        dTrkM.push(mTrk);   dTrkE.push(eTrk);   dTrkN.push(nTrk);
+        dTrkM.push(mTrkChart);   dTrkE.push(eTrkChart);   dTrkN.push(nTrkChart);
 
-        const totalTrkDay = mTrk + eTrk + nTrk;
-        if (totalTrkDay > maxTrucks.val) {
-            maxTrucks = { val: totalTrkDay, date: displayDate, breakdown: {m:mTrk, e:eTrk, n:nTrk} };
+        const mTrkDisp = getVal(log.morning, 'trucksDisp');
+        const eTrkDisp = getVal(log.evening, 'trucksDisp');
+        const nTrkDisp = getVal(log.night, 'trucksDisp');
+        const currentDayTotalTrucks = mTrkDisp + eTrkDisp + nTrkDisp;
+
+
+        if (currentDayTotalTrucks > peakDayStats.trucks.total) {
+            peakDayStats = {
+                date: displayDate,
+                trucks: { 
+                    total: currentDayTotalTrucks, 
+                    m: mTrkDisp, 
+                    e: eTrkDisp, 
+                    n: nTrkDisp 
+                },
+                pallets: { 
+                    total: mDisp + eDisp + nDisp, 
+                    m: mDisp, 
+                    e: eDisp, 
+                    n: nDisp 
+                }
+            };
         }
 
-        const totalPalletsDay = (mRec + mDisp) + (eRec + eDisp) + (nRec + nDisp);
-        if (totalPalletsDay > maxPallets.val) {
-            maxPallets = { val: totalPalletsDay, date: displayDate, breakdown: {m:(mRec+mDisp), e:(eRec+eDisp), n:(nRec+nDisp)} };
-        }
 
-        if (log.morning) { shiftStats.morning.truckSum += mTrk; shiftStats.morning.rec += mRec; shiftStats.morning.disp += mDisp; shiftStats.morning.daysCount++; }
-        if (log.evening) { shiftStats.evening.truckSum += eTrk; shiftStats.evening.rec += eRec; shiftStats.evening.disp += eDisp; shiftStats.evening.daysCount++; }
-        if (log.night)   { shiftStats.night.truckSum += nTrk;   shiftStats.night.rec += nRec;   shiftStats.night.disp += nDisp;   shiftStats.night.daysCount++; }
+        if (log.morning) { shiftStats.morning.truckSum += mTrkChart; shiftStats.morning.rec += getVal(log.morning, 'rec'); shiftStats.morning.disp += mDisp; shiftStats.morning.daysCount++; }
+        if (log.evening) { shiftStats.evening.truckSum += eTrkChart; shiftStats.evening.rec += getVal(log.evening, 'rec'); shiftStats.evening.disp += eDisp; shiftStats.evening.daysCount++; }
+        if (log.night)   { shiftStats.night.truckSum += nTrkChart;   shiftStats.night.rec += getVal(log.night, 'rec');   shiftStats.night.disp += nDisp;   shiftStats.night.daysCount++; }
     });
 
     const commonOptions = {
@@ -1481,12 +1668,15 @@ function renderShiftTrendChart() {
     window.shiftChartDisp = new Chart(ctxDisp, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Morning', data: dDispM, backgroundColor: '#facc15' }, { label: 'Evening', data: dDispE, backgroundColor: '#3b82f6' }, { label: 'Night', data: dDispN, backgroundColor: '#ef4444' }] }, options: commonOptions });
     window.shiftChartTrk = new Chart(ctxTrk, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Morning', data: dTrkM, backgroundColor: '#facc15' }, { label: 'Evening', data: dTrkE, backgroundColor: '#3b82f6' }, { label: 'Night', data: dTrkN, backgroundColor: '#ef4444' }] }, options: commonOptions });
 
-    renderShiftStatsCards(maxTrucks, maxPallets, shiftStats);
+
+    renderShiftStatsCards(peakDayStats, shiftStats);
 }
 
-function renderShiftStatsCards(maxTrk, maxPlt, stats) {
+
+function renderShiftStatsCards(peakDay, stats) {
     const container = document.getElementById('shift-stats-container');
     if (!container) return;
+
 
     const calcAvg = (s) => s.daysCount > 0 ? (s.truckSum / s.daysCount) : 0;
     const mAvg = calcAvg(stats.morning);
@@ -1497,55 +1687,55 @@ function renderShiftStatsCards(maxTrk, maxPlt, stats) {
     if (eAvg > best.avg) best = { name: 'Evening', avg: eAvg, icon: 'moon', color: 'text-blue-400', border: 'border-blue-500', data: stats.evening };
     if (nAvg > best.avg) best = { name: 'Night', avg: nAvg, icon: 'star', color: 'text-red-400', border: 'border-red-500', data: stats.night };
 
-    if (maxTrk.val === -1) maxTrk.val = 0;
-    if (maxPlt.val === -1) maxPlt.val = 0;
+
     const fmt = (n) => n.toLocaleString('en-US');
+    if (peakDay.trucks.total === -1) peakDay.trucks.total = 0;
 
     container.innerHTML = `
         <div class="glass-card rounded-xl p-5 border-l-4 border-indigo-500 relative group flex flex-col justify-center transition-all hover:-translate-y-1">
             <h5 class="text-xs font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <i class="fas fa-truck-moving"></i> Peak Truck Traffic
+                <i class="fas fa-truck-moving"></i> Max Truck Dispatch
             </h5>
             <div class="flex justify-between items-end">
                 <div>
-                    <span class="text-xs text-indigo-300 font-bold mb-1 block">Highest 24h Count</span>
-                    <span class="text-3xl font-bold text-white num-font">${fmt(maxTrk.val)}</span>
+                    <span class="text-xs text-indigo-300 font-bold mb-1 block">Dispatch Trucks</span>
+                    <span class="text-3xl font-bold text-white num-font">${fmt(peakDay.trucks.total)}</span>
                 </div>
                 <div class="text-right">
                     <span class="text-[10px] text-slate-500 block">Date</span>
-                    <span class="text-xs font-bold text-white bg-dark-700 px-2 py-1 rounded">${maxTrk.date}</span>
+                    <span class="text-xs font-bold text-white bg-dark-700 px-2 py-1 rounded">${peakDay.date}</span>
                 </div>
             </div>
             <div class="absolute inset-0 bg-dark-900/95 backdrop-blur-md z-20 flex flex-col justify-center px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                <h6 class="text-indigo-400 text-xs font-bold uppercase mb-3 border-b border-indigo-500/30 pb-1 text-center">Traffic Breakdown</h6>
+                <h6 class="text-indigo-400 text-xs font-bold uppercase mb-3 border-b border-indigo-500/30 pb-1 text-center">Trucks Breakdown</h6>
                 <div class="space-y-2">
-                    <div class="flex justify-between text-xs"><span class="text-yellow-400">Morning</span> <span class="text-white font-bold">${maxTrk.breakdown.m}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-blue-400">Evening</span> <span class="text-white font-bold">${maxTrk.breakdown.e}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-red-400">Night</span> <span class="text-white font-bold">${maxTrk.breakdown.n}</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-yellow-400">Morning</span> <span class="text-white font-bold">${peakDay.trucks.m}</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-blue-400">Evening</span> <span class="text-white font-bold">${peakDay.trucks.e}</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-red-400">Night</span> <span class="text-white font-bold">${peakDay.trucks.n}</span></div>
                 </div>
             </div>
         </div>
 
         <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-500 relative group flex flex-col justify-center transition-all hover:-translate-y-1">
             <h5 class="text-xs font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <i class="fas fa-cubes"></i> Max Daily Throughput
+                <i class="fas fa-cubes"></i> Throughput (Same Day)
             </h5>
             <div class="flex justify-between items-end">
                 <div>
-                    <span class="text-xs text-emerald-300 font-bold mb-1 block">Rec & Disp Volume</span>
-                    <span class="text-3xl font-bold text-white num-font">${fmt(maxPlt.val)}</span>
+                    <span class="text-xs text-emerald-300 font-bold mb-1 block">Dispatch Pallets</span>
+                    <span class="text-3xl font-bold text-white num-font">${fmt(peakDay.pallets.total)}</span>
                 </div>
                 <div class="text-right">
-                    <span class="text-[10px] text-slate-500 block">Date</span>
-                    <span class="text-xs font-bold text-white bg-dark-700 px-2 py-1 rounded">${maxPlt.date}</span>
+                    <span class="text-[10px] text-slate-500 block">Matching Date</span>
+                    <span class="text-xs font-bold text-white bg-dark-700 px-2 py-1 rounded">${peakDay.date}</span>
                 </div>
             </div>
             <div class="absolute inset-0 bg-dark-900/95 backdrop-blur-md z-20 flex flex-col justify-center px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                <h6 class="text-emerald-400 text-xs font-bold uppercase mb-3 border-b border-emerald-500/30 pb-1 text-center">Volume Breakdown</h6>
+                <h6 class="text-emerald-400 text-xs font-bold uppercase mb-3 border-b border-emerald-500/30 pb-1 text-center">Pallets Breakdown</h6>
                 <div class="space-y-2">
-                    <div class="flex justify-between text-xs"><span class="text-yellow-400">Morning</span> <span class="text-white font-bold">${fmt(maxPlt.breakdown.m)}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-blue-400">Evening</span> <span class="text-white font-bold">${fmt(maxPlt.breakdown.e)}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-red-400">Night</span> <span class="text-white font-bold">${fmt(maxPlt.breakdown.n)}</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-yellow-400">Morning</span> <span class="text-white font-bold">${fmt(peakDay.pallets.m)}</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-blue-400">Evening</span> <span class="text-white font-bold">${fmt(peakDay.pallets.e)}</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-red-400">Night</span> <span class="text-white font-bold">${fmt(peakDay.pallets.n)}</span></div>
                 </div>
             </div>
         </div>
@@ -2099,7 +2289,7 @@ if (m.startsWith('ALL')) {
         if (ctx) {
           const labels = monthList.slice(Math.max(0, monthList.length - 6));
           const dataPoints = Array.isArray(trendData) ? trendData.slice(-labels.length) : [];
-          // Build a new chart instance so we can access it later
+          
           chartInstance = new Chart(ctx, {
             type: 'line',
             data: {
@@ -2125,7 +2315,7 @@ if (m.startsWith('ALL')) {
             }
           });
         }
-        // Only push the chart instance if one was created; this avoids ReferenceErrors
+        
         if (chartInstance) sparklineInstances.push(chartInstance);
     }, 30);
 }
@@ -3089,7 +3279,7 @@ function renderVacationsDashboard() {
     }
 
         let presentationActive = false; let presentationIndex = 0; let presentationInterval = null; let presentationOrder = []; let presentationOverlay = null;
-        // Use "let" instead of "const" so the variable is hoisted and avoids temporal dead zone errors.
+        
         let presentationRestore = new Map();
 
         function getPresentationSections() {
@@ -3121,23 +3311,23 @@ function renderVacationsDashboard() {
   const stage = presentationOverlay.querySelector('#presentation-stage');
   if (!stage) return;
 
-  // Reset any previous transforms
+  
   el.style.transform = 'none';
   el.style.transformOrigin = 'top center';
 
-  // Use stage size (more accurate than window - magic numbers)
-  const padding = 24; // stage internal padding safety
+  
+  const padding = 24; 
   const vw = Math.max(200, stage.clientWidth - padding);
   const vh = Math.max(200, stage.clientHeight - padding);
 
-  // Measure after it's visible
+  
   const rect = el.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
 
   const scaleX = vw / rect.width;
   const scaleY = vh / rect.height;
 
-  // Allow upscale to fill screen (cap to avoid over-zoom)
+  
   let scale = Math.min(scaleX, scaleY);
   scale = Math.max(0.25, Math.min(scale, 1.35));
 
@@ -3398,15 +3588,16 @@ async function getDailySummary() {
             throw new Error(msg);
         }
 
-        let htmlContent = String(data.summary || '')
-            .replace(/^### (.*$)/gim, '<h4 class="text-lg font-bold text-white mt-4 mb-2">$1</h4>')
-            .replace(/^## (.*$)/gim, '<h3 class="text-xl font-bold text-brand-400 mt-6 mb-3">$1</h3>')
-            .replace(/^\- (.*$)/gim, '<li class="ml-4 text-slate-300">$1</li>')
-            .replace(/^\* (.*$)/gim, '<li class="ml-4 text-slate-300">$1</li>')
-            .replace(/\*\*(.*)\*\*/gim, '<strong class="text-white">$1</strong>')
-            .replace(/\n/g, '<br>');
+       let htmlContent = String(data.summary || '')
+  .replace(/^### (.*$)/gim, '<h4 class="text-lg font-bold text-slate-900 dark:text-white mt-4 mb-2">$1</h4>')
+  .replace(/^## (.*$)/gim, '<h3 class="text-xl font-bold text-brand-600 dark:text-brand-400 mt-6 mb-3">$1</h3>')
+  .replace(/^\- (.*$)/gim, '<li class="ml-4 text-slate-600 dark:text-slate-300">$1</li>')
+  .replace(/^\* (.*$)/gim, '<li class="ml-4 text-slate-600 dark:text-slate-300">$1</li>')
+  .replace(/\*\*(.*)\*\*/gim, '<strong class="text-slate-900 dark:text-white">$1</strong>')
+  .replace(/\n/g, '<br>');
 
-        content.innerHTML = `<div class="prose prose-invert prose-sm max-w-none leading-relaxed">${htmlContent}</div>`;
+content.innerHTML = `<div class="prose prose-sm max-w-none leading-relaxed dark:prose-invert">${htmlContent}</div>`;
+
 
         if (data.cached && cacheIndicator) {
             cacheIndicator.classList.remove('hidden');
@@ -3422,7 +3613,60 @@ async function getDailySummary() {
             </div>`;
     }
 }
-	
+function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    
+    if (isDark) {
+        html.classList.remove('dark');
+        html.classList.add('light');
+        localStorage.setItem('theme', 'light');
+    } else {
+        html.classList.remove('light');
+        html.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    }
+    
+    
+    updateChartsColors();
+}
+
+function updateChartsColors() {
+    const isLight = document.documentElement.classList.contains('light');
+    const textColor = isLight ? '#64748b' : '#94a3b8';
+    const gridColor = isLight ? '#e2e8f0' : '#1e293b';
+    
+    if (window.Chart) {
+        Chart.defaults.color = textColor;
+        Chart.defaults.borderColor = gridColor;
+        
+        
+        Object.values(chartInstances).forEach(chart => {
+            if (chart.options.scales.x) {
+                chart.options.scales.x.ticks.color = textColor;
+                chart.options.scales.x.grid.color = gridColor;
+            }
+            if (chart.options.scales.y) {
+                chart.options.scales.y.ticks.color = textColor;
+                chart.options.scales.y.grid.color = gridColor;
+            }
+            chart.update();
+        });
+        
+        
+        sparklineInstances.forEach(chart => {
+            chart.options.scales.x.ticks.color = textColor;
+            chart.update();
+        });
+    }
+}
+
+
+(function initTheme() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.className = saved;
+    setTimeout(updateChartsColors, 500);
+})();
 </script>
 </body>
 </html>
