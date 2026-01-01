@@ -3388,7 +3388,7 @@ function renderVacationsDashboard() {
                 stage.appendChild(el); el.style.margin = '0'; el.style.display = 'none';
             });
             presentationIndex = 0; showLiveSlide(presentationIndex);
-            window.presentationUpdateInterval = setInterval(async () => { try { if (typeof backgroundRefresh === 'function') await backgroundRefresh(); if (typeof updateAllCharts === 'function') updateAllCharts(); showLiveSlide(presentationIndex); } catch (e) {} }, 300000);
+            window.presentationUpdateInterval = setInterval(async () => { try { if (typeof backgroundRefresh === 'function') await backgroundRefresh(); if (typeof updateAllCharts === 'function') updateAllCharts(); showLiveSlide(presentationIndex); } catch (e) {} }, 1200000);
         }
 
         function stopPresentation() {
