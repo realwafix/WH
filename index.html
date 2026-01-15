@@ -1122,7 +1122,7 @@ async function handleLogin(e) {
                 showMainView('dashboard');
             }
             
-            setInterval(() => { backgroundRefresh(); }, 300000);
+            setInterval(() => { backgroundRefresh(); }, 900000);
 
         } else {
             document.getElementById('loginError').classList.remove('hidden');
@@ -1583,178 +1583,158 @@ function renderShiftTrendChart() {
 
     if(!ctxDisp || !ctxTrk) return;
 
-    const updateTitle = (canvas, newTitle) => {
-        const titleEl = canvas.parentElement.querySelector('h5') || canvas.previousElementSibling;
-        if (titleEl && titleEl.tagName === 'H5') titleEl.textContent = newTitle;
+
+const sel = document.getElementById('monthSelect');
+const selVal = sel?.value || '';
+
+
+let filteredByMonth = {};
+
+if (selVal && selVal.includes('-')) {
+    const [yy, monTxt] = selVal.split('-');
+
+    const year = 2000 + parseInt(yy);
+    const monthMap = {
+        Jan: '01', Feb: '02', Mar: '03', Apr: '04',
+        May: '05', Jun: '06', Jul: '07', Aug: '08',
+        Sep: '09', Oct: '10', Nov: '11', Dec: '12'
     };
-    updateTitle(ctxDisp, "Daily Dispatch Volume (Shift Breakdown)");
-    updateTitle(ctxTrk, "Daily Truck Traffic (Shift Breakdown)");
-    
-    const dates = Object.keys(masterShiftLogs).sort((a,b) => new Date(a) - new Date(b));
-    const last30 = dates.slice(-30);
-    const labels = last30.map(d => masterShiftLogs[d].displayDate || new Date(d).toLocaleDateString('en-GB', {day:'numeric', month:'short'}));
+    const mm = monthMap[monTxt];
 
-    const dDispM = [], dDispE = [], dDispN = [];
-    const dTrkM = [], dTrkE = [], dTrkN = [];
+    if (mm) {
+        const ymPrefix = `${year}-${mm}`; 
 
-    let peakDayStats = {
-        date: '-',
-        trucks: { total: -1, m: 0, e: 0, n: 0 },
-        pallets: { total: 0, m: 0, e: 0, n: 0 }
-    };
-    
-    const shiftStats = { 
-        morning: { truckSum: 0, daysCount: 0, rec: 0, disp: 0 }, 
-        evening: { truckSum: 0, daysCount: 0, rec: 0, disp: 0 }, 
-        night:   { truckSum: 0, daysCount: 0, rec: 0, disp: 0 } 
-    };
-
-    const getVal = (obj, key) => {
-        if (!obj) return 0;
-        return parseInt(obj[key]) || 0;
-    };
-
-    last30.forEach(dateKey => {
-        const log = masterShiftLogs[dateKey];
-        const displayDate = log.displayDate || new Date(dateKey).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
-
-        const mDisp = getVal(log.morning, 'disp'); 
-        const eDisp = getVal(log.evening, 'disp'); 
-        const nDisp = getVal(log.night, 'disp');
-
-        const mTrkChart = getVal(log.morning, 'trucksRec') || getVal(log.morning, 'act');
-        const eTrkChart = getVal(log.evening, 'trucksRec') || getVal(log.evening, 'act');
-        const nTrkChart = getVal(log.night, 'trucksRec') || getVal(log.night, 'act');
-
-        dDispM.push(mDisp); dDispE.push(eDisp); dDispN.push(nDisp);
-        dTrkM.push(mTrkChart);   dTrkE.push(eTrkChart);   dTrkN.push(nTrkChart);
-
-        const mTrkDisp = getVal(log.morning, 'trucksDisp');
-        const eTrkDisp = getVal(log.evening, 'trucksDisp');
-        const nTrkDisp = getVal(log.night, 'trucksDisp');
-        const currentDayTotalTrucks = mTrkDisp + eTrkDisp + nTrkDisp;
-
-
-        if (currentDayTotalTrucks > peakDayStats.trucks.total) {
-            peakDayStats = {
-                date: displayDate,
-                trucks: { 
-                    total: currentDayTotalTrucks, 
-                    m: mTrkDisp, 
-                    e: eTrkDisp, 
-                    n: nTrkDisp 
-                },
-                pallets: { 
-                    total: mDisp + eDisp + nDisp, 
-                    m: mDisp, 
-                    e: eDisp, 
-                    n: nDisp 
-                }
-            };
-        }
-
-
-        if (log.morning) { shiftStats.morning.truckSum += mTrkChart; shiftStats.morning.rec += getVal(log.morning, 'rec'); shiftStats.morning.disp += mDisp; shiftStats.morning.daysCount++; }
-        if (log.evening) { shiftStats.evening.truckSum += eTrkChart; shiftStats.evening.rec += getVal(log.evening, 'rec'); shiftStats.evening.disp += eDisp; shiftStats.evening.daysCount++; }
-        if (log.night)   { shiftStats.night.truckSum += nTrkChart;   shiftStats.night.rec += getVal(log.night, 'rec');   shiftStats.night.disp += nDisp;   shiftStats.night.daysCount++; }
-    });
-
-    const commonOptions = {
-        responsive: true, maintainAspectRatio: false,
-        scales: { x: { stacked: true, grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }, y: { stacked: true, grid: { color: '#334155' }, ticks: { color: '#94a3b8' } } },
-        plugins: { legend: { display: false } }
-    };
-
-    window.shiftChartDisp = new Chart(ctxDisp, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Morning', data: dDispM, backgroundColor: '#facc15' }, { label: 'Evening', data: dDispE, backgroundColor: '#3b82f6' }, { label: 'Night', data: dDispN, backgroundColor: '#ef4444' }] }, options: commonOptions });
-    window.shiftChartTrk = new Chart(ctxTrk, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Morning', data: dTrkM, backgroundColor: '#facc15' }, { label: 'Evening', data: dTrkE, backgroundColor: '#3b82f6' }, { label: 'Night', data: dTrkN, backgroundColor: '#ef4444' }] }, options: commonOptions });
-
-
-    renderShiftStatsCards(peakDayStats, shiftStats);
+        Object.keys(masterShiftLogs).forEach(d => {
+            if (d.startsWith(ymPrefix)) {
+                filteredByMonth[d] = masterShiftLogs[d];
+            }
+        });
+    }
 }
 
 
-function renderShiftStatsCards(peakDay, stats) {
+const logsToProcess = filteredByMonth;
+
+
+const sortedDates = Object.keys(logsToProcess).sort(
+    (a, b) => new Date(a) - new Date(b)
+);
+
+    const labels = [];
+    const dDispM = [], dDispE = [], dDispN = [];
+    const dTrkM = [], dTrkE = [], dTrkN = [];
+
+    const stats = {
+        morning: { disp: 0, trk: 0, count: 0 },
+        evening: { disp: 0, trk: 0, count: 0 },
+        night:   { disp: 0, trk: 0, count: 0 }
+    };
+
+    
+    const toNum = (v) => parseInt(v) || 0;
+
+    sortedDates.forEach(d => {
+        const log = logsToProcess[d];
+        labels.push(log.displayDate || d);
+
+        
+        const mD = toNum(log.morning?.disp);
+        const eD = toNum(log.evening?.disp);
+        const nD = toNum(log.night?.disp);
+
+        const mT = toNum(log.morning?.trucksDisp);
+        const eT = toNum(log.evening?.trucksDisp);
+        const nT = toNum(log.night?.trucksDisp);
+
+        
+        dDispM.push(mD); dDispE.push(eD); dDispN.push(nD);
+        dTrkM.push(mT);  dTrkE.push(eT);  dTrkN.push(nT);
+
+        
+        if (log.morning) { stats.morning.disp += mD; stats.morning.trk += mT; stats.morning.count++; }
+        if (log.evening) { stats.evening.disp += eD; stats.evening.trk += eT; stats.evening.count++; }
+        if (log.night)   { stats.night.disp += nD;   stats.night.trk += nT;   stats.night.count++; }
+    });
+
+    
+    window.shiftChartDisp = new Chart(ctxDisp, {
+        type: 'bar',
+        data: { labels, datasets: [
+            { label: 'Morning', data: dDispM, backgroundColor: '#facc15' },
+            { label: 'Evening', data: dDispE, backgroundColor: '#3b82f6' },
+            { label: 'Night', data: dDispN, backgroundColor: '#ef4444' }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { display: false } } }
+    });
+
+    
+    window.shiftChartTrk = new Chart(ctxTrk, {
+        type: 'bar',
+        data: { labels, datasets: [
+            { label: 'Morning', data: dTrkM, backgroundColor: '#facc15' },
+            { label: 'Evening', data: dTrkE, backgroundColor: '#3b82f6' },
+            { label: 'Night', data: dTrkN, backgroundColor: '#ef4444' }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } }, plugins: { legend: { display: false } } }
+    });
+
+    
+    updateShiftStatsCards(stats);
+}
+
+function updateShiftStatsCards(stats) {
     const container = document.getElementById('shift-stats-container');
     if (!container) return;
 
+    const fmt = (n) => n.toLocaleString();
+    
+    
+    const totalP = stats.morning.disp + stats.evening.disp + stats.night.disp;
+    const totalT = stats.morning.trk + stats.evening.trk + stats.night.trk;
 
-    const calcAvg = (s) => s.daysCount > 0 ? (s.truckSum / s.daysCount) : 0;
-    const mAvg = calcAvg(stats.morning);
-    const eAvg = calcAvg(stats.evening);
-    const nAvg = calcAvg(stats.night);
+    
+    const avgPM = stats.morning.count ? stats.morning.disp / stats.morning.count : 0;
+    const avgPE = stats.evening.count ? stats.evening.disp / stats.evening.count : 0;
+    const avgPN = stats.night.count ? stats.night.disp / stats.night.count : 0;
 
-    let best = { name: 'Morning', avg: mAvg, icon: 'sun', color: 'text-yellow-400', border: 'border-yellow-500', data: stats.morning };
-    if (eAvg > best.avg) best = { name: 'Evening', avg: eAvg, icon: 'moon', color: 'text-blue-400', border: 'border-blue-500', data: stats.evening };
-    if (nAvg > best.avg) best = { name: 'Night', avg: nAvg, icon: 'star', color: 'text-red-400', border: 'border-red-500', data: stats.night };
+    const avgTM = stats.morning.count ? stats.morning.trk / stats.morning.count : 0;
+    const avgTE = stats.evening.count ? stats.evening.trk / stats.evening.count : 0;
+    const avgTN = stats.night.count ? stats.night.trk / stats.night.count : 0;
 
-
-    const fmt = (n) => n.toLocaleString('en-US');
-    if (peakDay.trucks.total === -1) peakDay.trucks.total = 0;
+    
+    const bestP = [{n:'Morning',v:avgPM,c:'text-yellow-400'},{n:'Evening',v:avgPE,c:'text-blue-400'},{n:'Night',v:avgPN,c:'text-red-400'}].sort((a,b)=>b.v-a.v)[0];
+    const bestT = [{n:'Morning',v:avgTM,c:'text-yellow-400'},{n:'Evening',v:avgTE,c:'text-blue-400'},{n:'Night',v:avgTN,c:'text-red-400'}].sort((a,b)=>b.v-a.v)[0];
 
     container.innerHTML = `
-        <div class="glass-card rounded-xl p-5 border-l-4 border-indigo-500 relative group flex flex-col justify-center transition-all hover:-translate-y-1">
-            <h5 class="text-xs font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <i class="fas fa-truck-moving"></i> Max Truck Dispatch
-            </h5>
-            <div class="flex justify-between items-end">
-                <div>
-                    <span class="text-xs text-indigo-300 font-bold mb-1 block">Dispatch Trucks</span>
-                    <span class="text-3xl font-bold text-white num-font">${fmt(peakDay.trucks.total)}</span>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] text-slate-500 block">Date</span>
-                    <span class="text-xs font-bold text-white bg-dark-700 px-2 py-1 rounded">${peakDay.date}</span>
-                </div>
-            </div>
-            <div class="absolute inset-0 bg-dark-900/95 backdrop-blur-md z-20 flex flex-col justify-center px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                <h6 class="text-indigo-400 text-xs font-bold uppercase mb-3 border-b border-indigo-500/30 pb-1 text-center">Trucks Breakdown</h6>
-                <div class="space-y-2">
-                    <div class="flex justify-between text-xs"><span class="text-yellow-400">Morning</span> <span class="text-white font-bold">${peakDay.trucks.m}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-blue-400">Evening</span> <span class="text-white font-bold">${peakDay.trucks.e}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-red-400">Night</span> <span class="text-white font-bold">${peakDay.trucks.n}</span></div>
-                </div>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-indigo-500">
+            <h5 class="text-[10px] font-bold text-slate-400 uppercase mb-3">Total Pallets Dispatch (Selected Period)</h5>
+            <div class="text-3xl font-bold text-white mb-4 num-font">${fmt(totalP)}</div>
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs"><span class="text-yellow-400 font-bold">Morning Shift</span><span class="text-white">${fmt(stats.morning.disp)}</span></div>
+                <div class="flex justify-between text-xs"><span class="text-blue-400 font-bold">Evening Shift</span><span class="text-white">${fmt(stats.evening.disp)}</span></div>
+                <div class="flex justify-between text-xs"><span class="text-red-400 font-bold">Night Shift</span><span class="text-white">${fmt(stats.night.disp)}</span></div>
             </div>
         </div>
 
-        <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-500 relative group flex flex-col justify-center transition-all hover:-translate-y-1">
-            <h5 class="text-xs font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
-                <i class="fas fa-cubes"></i> Throughput (Same Day)
-            </h5>
-            <div class="flex justify-between items-end">
-                <div>
-                    <span class="text-xs text-emerald-300 font-bold mb-1 block">Dispatch Pallets</span>
-                    <span class="text-3xl font-bold text-white num-font">${fmt(peakDay.pallets.total)}</span>
-                </div>
-                <div class="text-right">
-                    <span class="text-[10px] text-slate-500 block">Matching Date</span>
-                    <span class="text-xs font-bold text-white bg-dark-700 px-2 py-1 rounded">${peakDay.date}</span>
-                </div>
-            </div>
-            <div class="absolute inset-0 bg-dark-900/95 backdrop-blur-md z-20 flex flex-col justify-center px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                <h6 class="text-emerald-400 text-xs font-bold uppercase mb-3 border-b border-emerald-500/30 pb-1 text-center">Pallets Breakdown</h6>
-                <div class="space-y-2">
-                    <div class="flex justify-between text-xs"><span class="text-yellow-400">Morning</span> <span class="text-white font-bold">${fmt(peakDay.pallets.m)}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-blue-400">Evening</span> <span class="text-white font-bold">${fmt(peakDay.pallets.e)}</span></div>
-                    <div class="flex justify-between text-xs"><span class="text-red-400">Night</span> <span class="text-white font-bold">${fmt(peakDay.pallets.n)}</span></div>
-                </div>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-emerald-500">
+            <h5 class="text-[10px] font-bold text-slate-400 uppercase mb-3">Total Trucks Dispatch (Selected Period)</h5>
+            <div class="text-3xl font-bold text-white mb-4 num-font">${fmt(totalT)}</div>
+            <div class="space-y-2">
+                <div class="flex justify-between text-xs"><span class="text-yellow-400 font-bold">Morning Shift</span><span class="text-white">${fmt(stats.morning.trk)}</span></div>
+                <div class="flex justify-between text-xs"><span class="text-blue-400 font-bold">Evening Shift</span><span class="text-white">${fmt(stats.evening.trk)}</span></div>
+                <div class="flex justify-between text-xs"><span class="text-red-400 font-bold">Night Shift</span><span class="text-white">${fmt(stats.night.trk)}</span></div>
             </div>
         </div>
 
-        <div class="glass-card rounded-xl p-5 border-l-4 ${best.border} relative group text-center flex flex-col items-center justify-center transition-all hover:-translate-y-1">
-            <h5 class="text-xs font-bold text-slate-400 uppercase mb-3">Shift Efficiency Leader</h5>
-            <div class="w-14 h-14 rounded-full bg-dark-700 flex items-center justify-center mb-2 shadow-lg border border-dark-600">
-                <i class="fas fa-${best.icon} text-2xl ${best.color}"></i>
+        <div class="glass-card rounded-xl p-5 border-l-4 border-amber-500">
+            <h5 class="text-[10px] font-bold text-slate-400 uppercase mb-3">Efficiency Leader (Monthly Avg)</h5>
+            <div class="mb-5">
+                <div class="text-[10px] text-slate-500 mb-1">Top Pallet Performance</div>
+                <div class="text-lg font-bold ${bestP.c}">${bestP.n} <span class="text-white text-sm ml-2">${bestP.v.toFixed(0)} Plt/Day</span></div>
             </div>
-            <h4 class="text-xl font-bold text-white">${best.name}</h4>
-            <p class="text-[10px] text-slate-500 mt-1">Avg Activity: <span class="text-white font-mono font-bold">${best.avg.toFixed(1)}</span> Trucks/Day</p>
-            
-            <div class="absolute inset-0 bg-dark-900/95 backdrop-blur-md z-20 flex flex-col justify-center px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl pointer-events-none">
-                <h6 class="${best.color} text-xs font-bold uppercase mb-3 border-b border-dark-600 pb-1 text-center">${best.name} Totals (30d)</h6>
-                <div class="space-y-2 w-full text-left">
-                    <div class="flex justify-between text-xs"><span>Total Trucks</span> <b class="font-mono">${fmt(best.data.truckSum)}</b></div>
-                    <div class="flex justify-between text-xs"><span>Total Rec</span> <b class="font-mono">${fmt(best.data.rec)}</b></div>
-                    <div class="flex justify-between text-xs"><span>Total Disp</span> <b class="font-mono">${fmt(best.data.disp)}</b></div>
-                </div>
+            <div>
+                <div class="text-[10px] text-slate-500 mb-1">Top Truck Performance</div>
+                <div class="text-lg font-bold ${bestT.c}">${bestT.n} <span class="text-white text-sm ml-2">${bestT.v.toFixed(1)} Trk/Day</span></div>
             </div>
         </div>
     `;
@@ -2032,7 +2012,7 @@ function renderMonthlySchedule(monthStr) {
             const cur = document.getElementById('monthSelect').value; const curIndex = fullMonthList.indexOf(cur);
             const startIndex = Math.max(0, curIndex - 11); monthList = fullMonthList.slice(startIndex, curIndex + 1);
             let prev = null; if (cur !== 'ALL_TOTAL') { const idx = fullMonthList.indexOf(cur); prev = (idx > 0) ? fullMonthList[idx - 1] : null; }
-            clearGrids(); renderOverview(cur, prev); renderStorage(cur, prev); renderQuality(cur, prev); renderInbound(cur, prev); renderOutbound(cur, prev); renderRSD(cur, prev); renderPending(cur, prev); renderMonthlySchedule(cur); updateAllCharts(); renderShiftTrendChart();
+            clearGrids(); renderOverview(cur, prev); renderStorage(cur, prev); renderQuality(cur, prev); renderInbound(cur, prev); renderOutbound(cur, prev); renderRSD(cur, prev); renderPending(cur, prev); renderMonthlySchedule(cur); updateAllCharts(); renderShiftTrendChart(); 
         }
 
         function getMetric(m, wh, col, isPercent) { 
@@ -2186,6 +2166,7 @@ if (m.startsWith('ALL')) {
             renderManagerReports();
             renderVacationsManager();
             renderVacationsDashboard();
+			renderShiftTrendChart();
 
             if (updElem) {
                 const now = new Date();
