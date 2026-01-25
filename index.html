@@ -873,12 +873,12 @@
                                 <input type="number" id="shiftlog-palletsDisp" placeholder="0" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none transition-colors">
                             </div>
                             <div>
-                                <label class="block text-[10px] text-slate-400 uppercase font-bold mb-1" title="Trucks Plan">Trucks Plan</label>
-                                <input type="number" id="shiftlog-plan" placeholder="0" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none transition-colors">
-                            </div>
-                            <div>
-                                <label class="block text-[10px] text-slate-400 uppercase font-bold mb-1" title="Trucks Actual">Trucks Act</label>
+                                <label class="block text-[10px] text-slate-400 uppercase font-bold mb-1" title="Trucks Actual">Trucks Plan</label>
                                 <input type="number" id="shiftlog-act" placeholder="0" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none transition-colors">
+                            </div>
+							<div>
+                                <label class="block text-[10px] text-slate-400 uppercase font-bold mb-1" title="Trucks Plan">Trucks Disp</label>
+                                <input type="number" id="shiftlog-plan" placeholder="0" class="w-full bg-dark-900 border border-dark-600 text-white rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none transition-colors">
                             </div>
                         </div>
                     </div>
@@ -894,8 +894,8 @@
                                         <th class="p-3">Shift</th>
                                         <th class="p-3">Pallets Rec</th>
                                         <th class="p-3">Pallets Disp</th>
+                                        <th class="p-3">Trucks Disp</th>
                                         <th class="p-3">Trucks Plan</th>
-                                        <th class="p-3">Trucks Act</th>
                                         <th class="p-3 text-center">Actions</th>
                                     </tr>
                                 </thead>
@@ -1565,7 +1565,7 @@ function renderWeekendTable() {
             const renderStats = (d, staffList) => {
             if (!d) return '<p class="italic opacity-50">No Data</p>';
             const staffStr = staffList && staffList.length > 0 ? staffList.map(s => escapeHTML(s)).join(', ') : 'No staff assigned';
-             return `<div class="grid grid-cols-2 gap-2"><div><span class="block text-xs opacity-60 font-bold">PALLETS</span><div class="flex justify-between text-xs"><span>Rec:</span><span class="font-bold">${escapeHTML(d.rec)}</span></div><div class="flex justify-between text-xs"><span>Disp:</span><span class="font-bold">${escapeHTML(d.disp)}</span></div></div><div><span class="block text-xs opacity-60 font-bold">TRUCKS</span><div class="flex justify-between text-xs"><span>Plan:</span><span class="font-bold">${escapeHTML(d.trucksPlan)}</span></div><div class="flex justify-between text-xs"><span>Act:</span><span class="font-bold">${escapeHTML(d.trucksRec)}</span></div></div></div><div class="mt-2 text-[10px] text-slate-400"><span class="font-bold text-slate-300">Staff:</span> ${staffStr}</div>`;
+             return `<div class="grid grid-cols-2 gap-2"><div><span class="block text-xs opacity-60 font-bold">PALLETS</span><div class="flex justify-between text-xs"><span>Rec:</span><span class="font-bold">${escapeHTML(d.rec)}</span></div><div class="flex justify-between text-xs"><span>Disp:</span><span class="font-bold">${escapeHTML(d.disp)}</span></div></div><div><span class="block text-xs opacity-60 font-bold">TRUCKS</span><div class="flex justify-between text-xs"><span>Disp:</span><span class="font-bold">${escapeHTML(d.trucksPlan)}</span></div><div class="flex justify-between text-xs"><span>Plan:</span><span class="font-bold">${escapeHTML(d.trucksRec)}</span></div></div></div><div class="mt-2 text-[10px] text-slate-400"><span class="font-bold text-slate-300">Staff:</span> ${staffStr}</div>`;
 };
             document.getElementById('card-stats-morning').innerHTML =  renderStats(data.morning, roster.morning); document.getElementById('card-staff-morning').innerHTML = roster.morning.map(n => `<div>${n}</div>`).join('') || 'No staff assigned';
             document.getElementById('card-stats-evening').innerHTML =  renderStats(data.evening, roster.evening); document.getElementById('card-staff-evening').innerHTML = roster.evening.map(n => `<div>${n}</div>`).join('') || 'No staff assigned';
@@ -1767,7 +1767,21 @@ function updateShiftStatsCards(stats) {
             const date = document.getElementById('shiftlog-date').value; const shift = document.getElementById('shiftlog-shift').value; const rec = document.getElementById('shiftlog-pallets').value; const disp = document.getElementById('shiftlog-palletsDisp').value; const plan = document.getElementById('shiftlog-plan').value; const act  = document.getElementById('shiftlog-act').value;
             if (!date || !shift) { Swal.fire('Error', 'Date and shift are required.', 'warning'); return; }
             if (!masterShiftLogs[date]) { masterShiftLogs[date] = { morning: null, evening: null, night: null, nowork: null, displayDate: new Date(date).toLocaleDateString('en-GB') }; }
-            masterShiftLogs[date][shift] = { rec: rec, disp: disp, plan: plan, act: act, trucksPlan: plan, trucksRec: act };
+            masterShiftLogs[date][shift] = { 
+    rec: rec, 
+    disp: disp, 
+    plan: plan, 
+    act: act, 
+    trucksPlan: plan, 
+    trucksRec: act, 
+    trucksDisp: plan, 
+    "Date": date, 
+    "Shift": shift.charAt(0).toUpperCase() + shift.slice(1), 
+    // التعديل هنا: نخزنهم كأرقام فقط بدون علامة % لكي لا ينهار الكود عند التحميل
+    "Dispatch": Number(disp) || 0, 
+    "Trucks": Number(act) || 0, 
+    "Performance": act && plan ? (Number(act) / Number(plan)) * 100 : 0 
+};
             await saveGithub('shift_logs_master.json', masterShiftLogs); renderShiftLogTable(); renderShiftTrendChart();
             document.getElementById('shiftlog-pallets').value = ''; document.getElementById('shiftlog-palletsDisp').value = ''; document.getElementById('shiftlog-plan').value = ''; document.getElementById('shiftlog-act').value = '';
             Swal.fire({ toast: true, icon: 'success', title: 'Entry added', timer: 1500, position: 'top-end', showConfirmButton: false });
